@@ -25,6 +25,10 @@ dist-ssr
 
 *.pem
 
+# Legacy GitHub files
+.github/workflows/
+.github/deployment-branches.png
+
 # Cloudflare Worker
 worker/dist
 worker/.wrangler
