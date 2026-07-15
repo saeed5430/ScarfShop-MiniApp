@@ -7,6 +7,8 @@ import { ThemeParamsPage } from '@/pages/ThemeParamsPage.tsx';
 import { TONConnectPage } from '@/pages/TONConnectPage/TONConnectPage';
 import { ChatPage } from '@/pages/ChatPage/ChatPage';
 import { QuickBuyPage } from '@/pages/QuickBuyPage/QuickBuyPage.tsx';
+import { ProfilePage } from '@/pages/ProfilePage/ProfilePage';
+import { AdminPanelPage } from '@/pages/AdminPanelPage/AdminPanelPage';
 
 interface Route {
   path: string;
@@ -19,6 +21,8 @@ export const routes: Route[] = [
   { path: '/', Component: IndexPage },
   { path: '/chat', Component: ChatPage, title: 'چت با هوش مصنوعی' },
   { path: '/quick-buy', Component: QuickBuyPage, title: 'خرید سریع' },
+  { path: '/profile', Component: ProfilePage, title: 'پروفایل' },
+  { path: '/admin-panel', Component: AdminPanelPage, title: 'پنل ادمین' },
   { path: '/init-data', Component: InitDataPage, title: 'Init Data' },
   { path: '/theme-params', Component: ThemeParamsPage, title: 'Theme Params' },
   { path: '/launch-params', Component: LaunchParamsPage, title: 'Launch Params' },

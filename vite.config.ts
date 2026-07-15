@@ -35,7 +35,7 @@ export default defineConfig({
     host: true,
     proxy: {
       '/api': {
-        target: 'https://scarf-mini-app.abdollahi003.workers.dev',
+        target: 'http://localhost:8787',
         changeOrigin: true,
       },
     },

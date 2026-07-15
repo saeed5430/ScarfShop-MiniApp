@@ -180,6 +180,35 @@
   color: white;
 }
 
+.action-icon-profile {
+  background: linear-gradient(135deg, #F59E0B 0%, #FBBF24 100%);
+  color: white;
+}
+
+.action-icon-admin {
+  background: linear-gradient(135deg, #EF4444 0%, #F87171 100%);
+  color: white;
+}
+
+.action-badge {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-color: #EF4444;
+  color: white;
+  font-family: 'Vazirmatn', 'Estedad', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.action-card-disabled {
+  opacity: 0.6;
+}
+
 .action-content {
   flex: 1;
 }

@@ -30,12 +30,12 @@ export async function apiRequest<T>(
 
 export interface AuthResponse {
   success: boolean;
-  user_id?: string;
+  customer_id?: string;
   session_token?: string;
   error?: string;
 }
 
-export interface User {
+export interface Customer {
   id: string;
   user_type: string;
   first_name: string;
@@ -53,7 +53,7 @@ export interface User {
 }
 
 export interface LoginResponse {
-  user: User;
+  customer: Customer;
 }
 
 export async function login(initData: string): Promise<AuthResponse> {
@@ -63,12 +63,29 @@ export async function login(initData: string): Promise<AuthResponse> {
   });
 }
 
-export async function getCurrentUser(): Promise<LoginResponse> {
+export async function getCurrentCustomer(): Promise<LoginResponse> {
   return apiRequest<LoginResponse>('/api/auth/me');
 }
 
-export async function getUsers(limit = 50, offset = 0) {
-  return apiRequest<{ users: User[]; total: number }>(`/api/users?limit=${limit}&offset=${offset}`);
+export async function checkIsAdmin(): Promise<{ is_admin: boolean }> {
+  return apiRequest<{ is_admin: boolean }>('/api/auth/is-admin');
+}
+
+export async function updateProfile(data: {
+  first_name?: string;
+  last_name?: string;
+  phone?: string;
+  address?: string;
+  postal_code?: string;
+}): Promise<{ customer: Customer }> {
+  return apiRequest<{ customer: Customer }>('/api/auth/profile', {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function getCustomers(limit = 50, offset = 0) {
+  return apiRequest<{ customers: Customer[]; total: number }>(`/api/customers?limit=${limit}&offset=${offset}`);
 }
 
 // Categories
@@ -76,6 +93,8 @@ export async function getUsers(limit = 50, offset = 0) {
 export interface Category {
   id: number;
   name: string;
+  slug: string | null;
+  description: string;
   created_at: string;
   updated_at: string;
 }
@@ -90,11 +109,15 @@ export interface Product {
   id: number;
   name: string;
   category_id: number;
+  slug: string | null;
   description: string;
   short_description: string;
   is_active: boolean;
   material: string;
   images: string[];
+  price: number;
+  stock: number;
+  sku: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -192,5 +215,76 @@ export async function setVariantSizes(variantId: number, sizeIds: number[]): Pro
   return apiRequest(`/api/variants/${variantId}/sizes`, {
     method: 'PUT',
     body: JSON.stringify({ size_ids: sizeIds }),
+  });
+}
+
+// Orders
+
+export interface Order {
+  id: number;
+  customer_id: number;
+  total: number;
+  payment_status: 'pending' | 'paid';
+  fulfillment_status: 'processing' | 'shipped' | 'delivered';
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OrderItem {
+  id: number;
+  order_id: number;
+  variant_id: number;
+  quantity: number;
+  price: number;
+}
+
+export async function getOrders(limit = 50, offset = 0): Promise<{ orders: Order[]; total: number }> {
+  return apiRequest(`/api/orders?limit=${limit}&offset=${offset}`);
+}
+
+export async function getOrder(id: number): Promise<{ order: Order; items: OrderItem[] }> {
+  return apiRequest(`/api/orders/${id}`);
+}
+
+export async function createOrder(data: { customer_id: number; notes?: string; items: { variant_id: number; quantity: number; price: number }[] }): Promise<{ order: Order }> {
+  return apiRequest('/api/orders', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateOrder(id: number, data: Partial<Order>): Promise<{ order: Order }> {
+  return apiRequest(`/api/orders/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+}
+
+// Coupons
+
+export interface Coupon {
+  id: number;
+  code: string;
+  discount: number;
+  type: 'percentage' | 'fixed';
+  expires_at: number | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function getCoupons(): Promise<{ coupons: Coupon[]; total: number }> {
+  return apiRequest('/api/coupons');
+}
+
+export async function getActiveCoupons(): Promise<{ coupons: Coupon[] }> {
+  return apiRequest('/api/coupons/active');
+}
+
+export async function createCoupon(data: Partial<Coupon>): Promise<{ coupon: Coupon }> {
+  return apiRequest('/api/coupons', {
+    method: 'POST',
+    body: JSON.stringify(data),
   });
 }

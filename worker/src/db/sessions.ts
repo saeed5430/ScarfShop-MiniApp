@@ -4,16 +4,16 @@ import type { Session } from './types';
 export class SessionsDB {
   constructor(private db: D1Database) {}
 
-  async create(userId: string): Promise<Session> {
+  async create(customerId: string): Promise<Session> {
     const sessionId = crypto.randomUUID();
     const token = crypto.randomUUID();
 
     const stmt = this.db.prepare(`
-      INSERT INTO sessions (session_id, user_id, token)
+      INSERT INTO sessions (session_id, customer_id, token)
       VALUES (?, ?, ?)
     `);
 
-    await stmt.bind(sessionId, userId, token).run();
+    await stmt.bind(sessionId, customerId, token).run();
 
     return this.findById(sessionId) as Promise<Session>;
   }
@@ -39,14 +39,14 @@ export class SessionsDB {
     return row ?? null;
   }
 
-  async findValidByUserId(userId: string): Promise<Session | null> {
+  async findValidByCustomerId(customerId: string): Promise<Session | null> {
     const stmt = this.db.prepare(`
       SELECT * FROM sessions
-      WHERE user_id = ? AND expires_at > unixepoch()
+      WHERE customer_id = ? AND expires_at > unixepoch()
       ORDER BY created_at DESC
       LIMIT 1
     `);
-    const row = await stmt.bind(userId).first<Session>();
+    const row = await stmt.bind(customerId).first<Session>();
     return row ?? null;
   }
 
@@ -56,9 +56,9 @@ export class SessionsDB {
     return result.meta.changes > 0;
   }
 
-  async deleteByUserId(userId: string): Promise<number> {
-    const stmt = this.db.prepare('DELETE FROM sessions WHERE user_id = ?');
-    const result = await stmt.bind(userId).run();
+  async deleteByCustomerId(customerId: string): Promise<number> {
+    const stmt = this.db.prepare('DELETE FROM sessions WHERE customer_id = ?');
+    const result = await stmt.bind(customerId).run();
     return result.meta.changes;
   }
 

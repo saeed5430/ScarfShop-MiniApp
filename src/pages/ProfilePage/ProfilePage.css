@@ -1,0 +1,192 @@
+.profile-page {
+  padding: 20px;
+  min-height: 100vh;
+  background-color: var(--color-bg);
+}
+
+.profile-header {
+  text-align: center;
+  padding: 24px 0;
+}
+
+.profile-avatar {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 16px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 3px solid var(--color-primary);
+}
+
+.profile-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-avatar-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
+  color: white;
+  font-family: 'Vazirmatn', 'Estedad', sans-serif;
+  font-size: 32px;
+  font-weight: 700;
+}
+
+.profile-name {
+  font-family: 'Vazirmatn', 'Estedad', sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin: 0 0 4px;
+}
+
+.profile-username {
+  font-family: 'Vazirmatn', 'Estedad', sans-serif;
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  margin: 0;
+}
+
+.profile-admin-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  background: linear-gradient(135deg, #EF4444 0%, #F87171 100%);
+  color: white;
+  font-family: 'Vazirmatn', 'Estedad', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 20px;
+  margin-top: 8px;
+}
+
+.profile-incomplete-notice {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background-color: #FEF3C7;
+  border-radius: 14px;
+  margin-bottom: 24px;
+  border: 1px solid #FCD34D;
+}
+
+.profile-incomplete-notice svg {
+  color: #D97706;
+  flex-shrink: 0;
+}
+
+.profile-incomplete-notice span {
+  font-family: 'Vazirmatn', 'Estedad', sans-serif;
+  font-size: 13px;
+  color: #92400E;
+  line-height: 1.5;
+}
+
+.profile-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.profile-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.profile-label {
+  font-family: 'Vazirmatn', 'Estedad', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.profile-input {
+  height: 52px;
+  padding: 0 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background-color: var(--color-surface);
+  font-family: 'Vazirmatn', 'Estedad', sans-serif;
+  font-size: 16px;
+  color: var(--color-text-primary);
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.profile-input:focus {
+  border-color: var(--color-primary);
+}
+
+.profile-input::placeholder {
+  color: var(--color-text-secondary);
+}
+
+.profile-textarea {
+  height: auto;
+  padding: 14px 16px;
+  resize: vertical;
+  min-height: 100px;
+}
+
+.profile-submit {
+  height: 52px;
+  border: none;
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
+  color: white;
+  font-family: 'Vazirmatn', 'Estedad', sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.15s, opacity 0.15s;
+  margin-top: 8px;
+}
+
+.profile-submit:active {
+  transform: scale(0.98);
+}
+
+.profile-submit:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.profile-phone-row {
+  display: flex;
+  gap: 8px;
+}
+
+.profile-input-phone {
+  flex: 1;
+}
+
+.profile-phone-btn {
+  height: 52px;
+  padding: 0 16px;
+  border: 1px solid var(--color-primary);
+  border-radius: 14px;
+  background-color: transparent;
+  color: var(--color-primary);
+  font-family: 'Vazirmatn', 'Estedad', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.profile-phone-btn:hover {
+  background-color: var(--color-primary);
+  color: white;
+}
+
+.profile-phone-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}

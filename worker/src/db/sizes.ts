@@ -51,4 +51,16 @@ export class SizesDB {
     const result = await this.db.prepare('DELETE FROM sizes WHERE id = ?').bind(id).run();
     return (result.meta.changes ?? 0) > 0;
   }
+
+  async getProductCount(sizeId: number): Promise<number> {
+    const row = await this.db.prepare(
+      'SELECT COUNT(*) as count FROM product_sizes WHERE size_id = ?'
+    ).bind(sizeId).first();
+    return Number(row?.count ?? 0);
+  }
+
+  async isUsedInProducts(sizeId: number): Promise<boolean> {
+    const count = await this.getProductCount(sizeId);
+    return count > 0;
+  }
 }

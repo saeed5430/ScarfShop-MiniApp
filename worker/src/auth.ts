@@ -118,13 +118,13 @@ export async function verifyTelegramInitData(
   }
 }
 
-export async function authenticateUser(
+export async function authenticateCustomer(
   db: D1Database,
   initData: string,
   botToken: string
 ): Promise<{
   success: boolean;
-  user_id?: string;
+  customer_id?: string;
   session_token?: string;
   error?: string;
 }> {
@@ -142,10 +142,10 @@ export async function authenticateUser(
     return { success: false, error: 'User data not found' };
   }
 
-  const userId = String(telegramUser.id);
+  const customerId = String(telegramUser.id);
 
-  await database.users.create({
-    id: userId,
+  await database.customers.create({
+    id: customerId,
     first_name: telegramUser.first_name,
     last_name: telegramUser.last_name,
     username: telegramUser.username,
@@ -154,22 +154,22 @@ export async function authenticateUser(
     is_premium: telegramUser.is_premium,
   });
 
-  const existingSession = await database.sessions.findValidByUserId(userId);
+  const existingSession = await database.sessions.findValidByCustomerId(customerId);
 
   if (existingSession) {
     await database.sessions.extend(existingSession.session_id);
     return {
       success: true,
-      user_id: userId,
+      customer_id: customerId,
       session_token: existingSession.token,
     };
   }
 
-  const session = await database.sessions.create(userId);
+  const session = await database.sessions.create(customerId);
 
   return {
     success: true,
-    user_id: userId,
+    customer_id: customerId,
     session_token: session.token,
   };
 }
@@ -179,7 +179,7 @@ export async function validateSession(
   token: string
 ): Promise<{
   valid: boolean;
-  user_id?: string;
+  customer_id?: string;
   error?: string;
 }> {
   const database = new Database(db);
@@ -190,18 +190,10 @@ export async function validateSession(
     return { valid: false, error: 'Invalid or expired session' };
   }
 
-  await database.users.updateLastActive(session.user_id);
+  await database.customers.updateLastActive(session.customer_id);
 
   return {
     valid: true,
-    user_id: session.user_id,
+    customer_id: session.customer_id,
   };
-}
-
-export async function checkAdmin(
-  db: D1Database,
-  userId: string
-): Promise<boolean> {
-  const database = new Database(db);
-  return database.admins.isAdmin(userId);
 }

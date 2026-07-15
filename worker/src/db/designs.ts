@@ -13,6 +13,7 @@ export class DesignsDB {
     return {
       id: Number(row.id),
       name: String(row.name),
+      name_en: row.name_en != null ? String(row.name_en) : '',
       created_at: String(row.created_at),
       updated_at: String(row.updated_at),
     };
@@ -21,8 +22,8 @@ export class DesignsDB {
   async create(input: CreateDesignInput): Promise<Design> {
     const now = nowJalali();
     const result = await this.db.prepare(
-      'INSERT INTO designs (name, created_at, updated_at) VALUES (?, ?, ?)'
-    ).bind(input.name, now, now).run();
+      'INSERT INTO designs (name, name_en, created_at, updated_at) VALUES (?, ?, ?, ?)'
+    ).bind(input.name, input.name_en ?? '', now, now).run();
 
     return this.getById(result.meta.last_row_id as number) as Promise<Design>;
   }
@@ -38,12 +39,20 @@ export class DesignsDB {
   }
 
   async update(id: number, input: UpdateDesignInput): Promise<Design | null> {
-    if (!input.name) return this.getById(id);
+    const fields: string[] = [];
+    const values: unknown[] = [];
+
+    if (input.name !== undefined) { fields.push('name = ?'); values.push(input.name); }
+    if (input.name_en !== undefined) { fields.push('name_en = ?'); values.push(input.name_en); }
+
+    if (fields.length === 0) return this.getById(id);
 
     const now = nowJalali();
-    await this.db.prepare('UPDATE designs SET name = ?, updated_at = ? WHERE id = ?')
-      .bind(input.name, now, id).run();
+    fields.push('updated_at = ?');
+    values.push(now);
+    values.push(id);
 
+    await this.db.prepare(`UPDATE designs SET ${fields.join(', ')} WHERE id = ?`).bind(...values).run();
     return this.getById(id);
   }
 

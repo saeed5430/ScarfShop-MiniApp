@@ -1,15 +1,15 @@
 import type { D1Database } from '@cloudflare/workers-types';
-import type { User, CreateUserInput, UpdateUserInput } from './types';
+import type { Customer, CreateCustomerInput, UpdateCustomerInput } from './types';
 import { nowJalali } from '../utils/date';
 
-export class UsersDB {
+export class CustomersDB {
   constructor(private db: D1Database) {}
 
-  async create(input: CreateUserInput): Promise<User> {
+  async create(input: CreateCustomerInput): Promise<Customer> {
     const jalaliNow = nowJalali();
 
     const stmt = this.db.prepare(`
-      INSERT INTO users (id, first_name, last_name, username, language_code, avatar_url, is_premium, invite_code, created_at, last_active)
+      INSERT INTO customers (id, first_name, last_name, username, language_code, avatar_url, is_premium, invite_code, created_at, last_active)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET
         first_name = excluded.first_name,
@@ -34,22 +34,22 @@ export class UsersDB {
       jalaliNow
     ).run();
 
-    return this.findById(input.id) as Promise<User>;
+    return this.findById(input.id) as Promise<Customer>;
   }
 
-  async findById(id: string): Promise<User | null> {
-    const stmt = this.db.prepare('SELECT * FROM users WHERE id = ?');
-    const row = await stmt.bind(id).first<User>();
+  async findById(id: string): Promise<Customer | null> {
+    const stmt = this.db.prepare('SELECT * FROM customers WHERE id = ?');
+    const row = await stmt.bind(id).first<Customer>();
     return row ?? null;
   }
 
-  async findByUsername(username: string): Promise<User | null> {
-    const stmt = this.db.prepare('SELECT * FROM users WHERE username = ?');
-    const row = await stmt.bind(username).first<User>();
+  async findByUsername(username: string): Promise<Customer | null> {
+    const stmt = this.db.prepare('SELECT * FROM customers WHERE username = ?');
+    const row = await stmt.bind(username).first<Customer>();
     return row ?? null;
   }
 
-  async update(id: string, input: UpdateUserInput): Promise<User | null> {
+  async update(id: string, input: UpdateCustomerInput): Promise<Customer | null> {
     const fields: string[] = [];
     const values: (string | number | null)[] = [];
 
@@ -91,7 +91,7 @@ export class UsersDB {
     }
 
     values.push(id);
-    const stmt = this.db.prepare(`UPDATE users SET ${fields.join(', ')} WHERE id = ?`);
+    const stmt = this.db.prepare(`UPDATE customers SET ${fields.join(', ')} WHERE id = ?`);
     await stmt.bind(...values).run();
 
     return this.findById(id);
@@ -99,24 +99,24 @@ export class UsersDB {
 
   async updateLastActive(id: string): Promise<void> {
     const jalaliNow = nowJalali();
-    const stmt = this.db.prepare('UPDATE users SET last_active = ? WHERE id = ?');
+    const stmt = this.db.prepare('UPDATE customers SET last_active = ? WHERE id = ?');
     await stmt.bind(jalaliNow, id).run();
   }
 
-  async list(limit = 50, offset = 0): Promise<User[]> {
-    const stmt = this.db.prepare('SELECT * FROM users ORDER BY created_at DESC LIMIT ? OFFSET ?');
-    const results = await stmt.bind(limit, offset).all<User>();
+  async list(limit = 50, offset = 0): Promise<Customer[]> {
+    const stmt = this.db.prepare('SELECT * FROM customers ORDER BY created_at DESC LIMIT ? OFFSET ?');
+    const results = await stmt.bind(limit, offset).all<Customer>();
     return results.results;
   }
 
   async count(): Promise<number> {
-    const stmt = this.db.prepare('SELECT COUNT(*) as count FROM users');
+    const stmt = this.db.prepare('SELECT COUNT(*) as count FROM customers');
     const result = await stmt.first<{ count: number }>();
     return result?.count ?? 0;
   }
 
   async delete(id: string): Promise<boolean> {
-    const stmt = this.db.prepare('DELETE FROM users WHERE id = ?');
+    const stmt = this.db.prepare('DELETE FROM customers WHERE id = ?');
     const result = await stmt.bind(id).run();
     return result.meta.changes > 0;
   }

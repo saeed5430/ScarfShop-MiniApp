@@ -4,21 +4,21 @@ import { useAuth } from '@/context/AuthContext.tsx';
 import './Header.css';
 
 export const Header: FC = () => {
-  const { user } = useAuth();
+  const { customer } = useAuth();
 
-  const userName = useMemo(() => {
-    return user?.first_name ?? 'کاربر';
-  }, [user]);
+  const customerName = useMemo(() => {
+    return customer?.first_name ?? 'کاربر';
+  }, [customer]);
 
-  const userAvatar = useMemo(() => {
-    const photoUrl = user?.avatar_url;
+  const customerAvatar = useMemo(() => {
+    const photoUrl = customer?.avatar_url;
     if (photoUrl) {
       return photoUrl;
     }
-    const firstName = user?.first_name ?? '';
+    const firstName = customer?.first_name ?? '';
     const firstChar = firstName.charAt(0) || 'S';
     return `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40"><rect width="40" height="40" rx="20" fill="#7C3AED"/><text x="20" y="20" text-anchor="middle" dy=".35em" font-family="Vazirmatn,sans-serif" font-size="18" font-weight="600" fill="white">${firstChar}</text></svg>`)}`;
-  }, [user]);
+  }, [customer]);
 
   return (
     <header className="app-header">
@@ -32,13 +32,13 @@ export const Header: FC = () => {
 
       <div className="header-greeting">
         <span className="header-hello">سلام،</span>
-        <span className="header-name">{userName}!</span>
+        <span className="header-name">{customerName}!</span>
       </div>
 
       <div className="header-user">
         <img
-          src={userAvatar}
-          alt={userName}
+          src={customerAvatar}
+          alt={customerName}
           className="header-user-avatar"
         />
       </div>

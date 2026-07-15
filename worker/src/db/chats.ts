@@ -5,18 +5,18 @@ export class ChatsDB {
   constructor(private db: D1Database) {}
 
   async addMessage(input: {
-    user_id: string;
+    customer_id: string;
     message: string;
     sender_type: 'user' | 'assistant';
     ai_connected?: boolean;
   }): Promise<Chat> {
     const stmt = this.db.prepare(`
-      INSERT INTO chats (user_id, message, sender_type, ai_connected)
+      INSERT INTO chats (customer_id, message, sender_type, ai_connected)
       VALUES (?, ?, ?, ?)
     `);
 
     const result = await stmt.bind(
-      input.user_id,
+      input.customer_id,
       input.message,
       input.sender_type,
       input.ai_connected ? 1 : 0
@@ -32,50 +32,50 @@ export class ChatsDB {
     return row ?? null;
   }
 
-  async findByUserId(userId: string, limit = 50, offset = 0): Promise<Chat[]> {
+  async findByCustomerId(customerId: string, limit = 50, offset = 0): Promise<Chat[]> {
     const stmt = this.db.prepare(`
       SELECT * FROM chats
-      WHERE user_id = ?
+      WHERE customer_id = ?
       ORDER BY timestamp DESC
       LIMIT ? OFFSET ?
     `);
-    const results = await stmt.bind(userId, limit, offset).all<Chat>();
+    const results = await stmt.bind(customerId, limit, offset).all<Chat>();
     return results.results;
   }
 
-  async getConversation(userId: string, limit = 20): Promise<Chat[]> {
+  async getConversation(customerId: string, limit = 20): Promise<Chat[]> {
     const stmt = this.db.prepare(`
       SELECT * FROM chats
-      WHERE user_id = ?
+      WHERE customer_id = ?
       ORDER BY timestamp ASC
       LIMIT ?
     `);
-    const results = await stmt.bind(userId, limit).all<Chat>();
+    const results = await stmt.bind(customerId, limit).all<Chat>();
     return results.results;
   }
 
-  async getRecentMessages(userId: string, count = 10): Promise<Chat[]> {
+  async getRecentMessages(customerId: string, count = 10): Promise<Chat[]> {
     const stmt = this.db.prepare(`
       SELECT * FROM (
         SELECT * FROM chats
-        WHERE user_id = ?
+        WHERE customer_id = ?
         ORDER BY timestamp DESC
         LIMIT ?
       ) ORDER BY timestamp ASC
     `);
-    const results = await stmt.bind(userId, count).all<Chat>();
+    const results = await stmt.bind(customerId, count).all<Chat>();
     return results.results;
   }
 
-  async countByUserId(userId: string): Promise<number> {
-    const stmt = this.db.prepare('SELECT COUNT(*) as count FROM chats WHERE user_id = ?');
-    const result = await stmt.bind(userId).first<{ count: number }>();
+  async countByCustomerId(customerId: string): Promise<number> {
+    const stmt = this.db.prepare('SELECT COUNT(*) as count FROM chats WHERE customer_id = ?');
+    const result = await stmt.bind(customerId).first<{ count: number }>();
     return result?.count ?? 0;
   }
 
-  async deleteByUserId(userId: string): Promise<number> {
-    const stmt = this.db.prepare('DELETE FROM chats WHERE user_id = ?');
-    const result = await stmt.bind(userId).run();
+  async deleteByCustomerId(customerId: string): Promise<number> {
+    const stmt = this.db.prepare('DELETE FROM chats WHERE customer_id = ?');
+    const result = await stmt.bind(customerId).run();
     return result.meta.changes;
   }
 

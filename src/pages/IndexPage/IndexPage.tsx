@@ -2,11 +2,15 @@ import { type FC } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Page } from '@/components/Page.tsx';
 import { Header } from '@/components/Header/Header.tsx';
+import { useAuth } from '@/context/AuthContext.tsx';
 
 import './IndexPage.css';
 
 export const IndexPage: FC = () => {
   const navigate = useNavigate();
+  const { customer } = useAuth();
+
+  const isProfileComplete = Boolean(customer?.phone && customer?.first_name);
 
   return (
     <Page back={false}>
@@ -29,6 +33,27 @@ export const IndexPage: FC = () => {
 
         <div className="home-content">
           <div className="home-actions">
+            {/* Profile Card */}
+            <div className="action-card" onClick={() => navigate('/profile')}>
+              <div className="action-icon action-icon-profile">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                  <circle cx="12" cy="7" r="4" />
+                </svg>
+              </div>
+              <div className="action-content">
+                <h3 className="action-title">پروفایل من</h3>
+                <p className="action-desc">
+                  {isProfileComplete ? 'مشاهده و ویرایش اطلاعات' : 'تکمیل اطلاعات برای خرید'}
+                </p>
+              </div>
+              {!isProfileComplete && <div className="action-badge">!</div>}
+              <svg className="action-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="15 18 9 12 15 6" />
+              </svg>
+            </div>
+
+            {/* Chat Card */}
             <div className="action-card" onClick={() => navigate('/chat')}>
               <div className="action-icon action-icon-ai">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -48,7 +73,17 @@ export const IndexPage: FC = () => {
               </svg>
             </div>
 
-            <div className="action-card" onClick={() => navigate('/quick-buy')}>
+            {/* Quick Buy Card */}
+            <div
+              className={`action-card ${!isProfileComplete ? 'action-card-disabled' : ''}`}
+              onClick={() => {
+                if (isProfileComplete) {
+                  navigate('/quick-buy');
+                } else {
+                  navigate('/profile');
+                }
+              }}
+            >
               <div className="action-icon action-icon-buy">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="9" cy="21" r="1" />
@@ -58,7 +93,26 @@ export const IndexPage: FC = () => {
               </div>
               <div className="action-content">
                 <h3 className="action-title">خرید سریع</h3>
-                <p className="action-desc">مشاهده محصولات جدید</p>
+                <p className="action-desc">
+                  {isProfileComplete ? 'مشاهده محصولات جدید' : 'ابتدا پروفایل خود را تکمیل کنید'}
+                </p>
+              </div>
+              <svg className="action-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="15 18 9 12 15 6" />
+              </svg>
+            </div>
+
+            {/* Admin Panel Card - Visible to all */}
+            <div className="action-card" onClick={() => window.open('http://localhost:3000/login', '_blank')}>
+              <div className="action-icon action-icon-admin">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                </svg>
+              </div>
+              <div className="action-content">
+                <h3 className="action-title">ورود به پنل ادمین</h3>
+                <p className="action-desc">مدیریت فروشگاه</p>
               </div>
               <svg className="action-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="15 18 9 12 15 6" />

@@ -9,6 +9,7 @@
     "build": "wrangler deploy --dry-run --outdir=dist"
   },
   "dependencies": {
+    "better-auth": "^1.6.23",
     "hono": "^4.4.0"
   },
   "devDependencies": {

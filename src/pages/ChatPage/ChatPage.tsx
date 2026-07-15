@@ -20,7 +20,7 @@ const SUGGESTIONS = [
 ];
 
 export const ChatPage: FC = () => {
-  const { user } = useAuth();
+  const { customer } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -80,7 +80,7 @@ export const ChatPage: FC = () => {
       return 'ما در رنگ‌ها و مدل‌های متنوعی محصول داریم: مشکی، سرمه‌ای، زرشکی، کرمی و خیلی رنگ‌های دیگه. برای دیدن همه رنگ‌ها وارد صفحه محصولات بشید.';
     }
     if (lower.includes('سلام') || lower.includes('درود')) {
-      return `سلام ${user?.first_name || 'عزیز'}! 👋 خوش اومدی. چطور می‌تونم کمکت کنم؟`;
+      return `سلام ${customer?.first_name || 'عزیز'}! 👋 خوش اومدی. چطور می‌تونم کمکت کنم؟`;
     }
     return 'ممنون از پیامت. در حال حاضر دستیار هوش مصنوعی ما در حال یادگیری هست. به زودی می‌تونه به تمام سوالات شما پاسخ بده. 🤖';
   };

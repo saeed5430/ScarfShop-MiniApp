@@ -62,4 +62,16 @@ export class ColorsDB {
     const result = await this.db.prepare('DELETE FROM colors WHERE id = ?').bind(id).run();
     return (result.meta.changes ?? 0) > 0;
   }
+
+  async getProductCount(colorId: number): Promise<number> {
+    const row = await this.db.prepare(
+      'SELECT COUNT(*) as count FROM product_colors WHERE color_id = ?'
+    ).bind(colorId).first();
+    return Number(row?.count ?? 0);
+  }
+
+  async isUsedInProducts(colorId: number): Promise<boolean> {
+    const count = await this.getProductCount(colorId);
+    return count > 0;
+  }
 }

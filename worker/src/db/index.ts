@@ -1,6 +1,6 @@
 import type { D1Database } from '@cloudflare/workers-types';
-import { UsersDB } from './users';
-import { AdminsDB } from './admins';
+import { CustomersDB } from './customers';
+import { AdminsDB } from './admin';
 import { SessionsDB } from './sessions';
 import { ChatsDB } from './chats';
 import { CategoriesDB } from './categories';
@@ -8,11 +8,13 @@ import { ProductsDB } from './products';
 import { DesignsDB } from './designs';
 import { ColorsDB } from './colors';
 import { SizesDB } from './sizes';
-import { VariantsDB } from './variants';
-import { VariantRelationsDB } from './variant-relations';
+import { OrdersDB } from './orders';
+import { OrderItemsDB } from './order-items';
+import { CouponsDB } from './coupons';
+import { SettingsDB } from './settings';
 
 export class Database {
-  public users: UsersDB;
+  public customers: CustomersDB;
   public admins: AdminsDB;
   public sessions: SessionsDB;
   public chats: ChatsDB;
@@ -21,11 +23,13 @@ export class Database {
   public designs: DesignsDB;
   public colors: ColorsDB;
   public sizes: SizesDB;
-  public variants: VariantsDB;
-  public variantRelations: VariantRelationsDB;
+  public orders: OrdersDB;
+  public orderItems: OrderItemsDB;
+  public coupons: CouponsDB;
+  public settings: SettingsDB;
 
   constructor(db: D1Database) {
-    this.users = new UsersDB(db);
+    this.customers = new CustomersDB(db);
     this.admins = new AdminsDB(db);
     this.sessions = new SessionsDB(db);
     this.chats = new ChatsDB(db);
@@ -34,17 +38,22 @@ export class Database {
     this.designs = new DesignsDB(db);
     this.colors = new ColorsDB(db);
     this.sizes = new SizesDB(db);
-    this.variants = new VariantsDB(db);
-    this.variantRelations = new VariantRelationsDB(db);
+    this.orders = new OrdersDB(db);
+    this.orderItems = new OrderItemsDB(db);
+    this.coupons = new CouponsDB(db);
+    this.settings = new SettingsDB(db);
   }
 }
 
 export type {
-  User, Admin, Session, Chat, CreateUserInput, UpdateUserInput,
+  Customer, Admin, Session, Chat, CreateCustomerInput, UpdateCustomerInput,
   Category, CreateCategoryInput, UpdateCategoryInput,
   Product, CreateProductInput, UpdateProductInput,
   Design, CreateDesignInput, UpdateDesignInput,
   Color, CreateColorInput, UpdateColorInput,
   Size, CreateSizeInput, UpdateSizeInput,
-  Variant, CreateVariantInput, UpdateVariantInput,
+  Order, CreateOrderInput, UpdateOrderInput,
+  OrderItem, CreateOrderItemInput,
+  Coupon, CreateCouponInput, UpdateCouponInput,
+  Setting, UpdateSettingInput,
 } from './types';
