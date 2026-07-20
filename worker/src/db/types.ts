@@ -211,9 +211,7 @@ export interface ProductSize {
 export interface Order {
   id: number;
   customer_id: string;
-  total: number;
   payment_status: 'pending' | 'paid';
-  fulfillment_status: 'processing' | 'shipped' | 'delivered';
   notes: string | null;
   created_at: string;
   updated_at: string;
@@ -221,16 +219,12 @@ export interface Order {
 
 export interface CreateOrderInput {
   customer_id: string;
-  total?: number;
   payment_status?: 'pending' | 'paid';
-  fulfillment_status?: 'processing' | 'shipped' | 'delivered';
   notes?: string;
 }
 
 export interface UpdateOrderInput {
-  total?: number;
   payment_status?: 'pending' | 'paid';
-  fulfillment_status?: 'processing' | 'shipped' | 'delivered';
   notes?: string;
 }
 
@@ -243,7 +237,6 @@ export interface OrderItem {
   color_id: number | null;
   size_id: number | null;
   quantity: number;
-  price: number;
 }
 
 export interface CreateOrderItemInput {
@@ -252,7 +245,6 @@ export interface CreateOrderItemInput {
   color_id?: number;
   size_id?: number;
   quantity: number;
-  price: number;
 }
 
 // Coupons

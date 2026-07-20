@@ -16,21 +16,19 @@ export class OrderItemsDB {
       color_id: row.color_id != null ? Number(row.color_id) : null,
       size_id: row.size_id != null ? Number(row.size_id) : null,
       quantity: Number(row.quantity),
-      price: Number(row.price),
     };
   }
 
   async create(input: CreateOrderItemInput): Promise<OrderItem> {
     const result = await this.db.prepare(`
-      INSERT INTO order_items (order_id, product_id, color_id, size_id, quantity, price)
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO order_items (order_id, product_id, color_id, size_id, quantity)
+      VALUES (?, ?, ?, ?, ?)
     `).bind(
       input.order_id,
       input.product_id,
       input.color_id ?? null,
       input.size_id ?? null,
       input.quantity,
-      input.price,
     ).run();
 
     return this.getById(result.meta.last_row_id as number) as Promise<OrderItem>;

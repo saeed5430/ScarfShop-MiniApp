@@ -698,7 +698,13 @@ apiRoutes.get('/orders', async (c) => {
   const orders = await database.orders.list(limit, offset);
   const total = await database.orders.count();
 
-  return c.json({ orders, total });
+  const enriched = await Promise.all(orders.map(async (order) => {
+    const { results } = await db.prepare('SELECT COUNT(*) as count FROM order_items WHERE order_id = ?').bind(order.id).all();
+    const itemCount = (results[0] as Record<string, unknown>)?.count ?? 0;
+    return { ...order, item_count: Number(itemCount) };
+  }));
+
+  return c.json({ orders: enriched, total });
 });
 
 apiRoutes.get('/orders/:id', async (c) => {
@@ -709,7 +715,25 @@ apiRoutes.get('/orders/:id', async (c) => {
   const order = await database.orders.getById(Number(c.req.param('id')));
   if (!order) return c.json({ error: 'Not found' }, 404);
 
-  const items = await database.orderItems.listByOrder(order.id);
+  const rawItems = await database.orderItems.listByOrder(order.id);
+
+  const items = await Promise.all(rawItems.map(async (item) => {
+    const product = item.product_id ? await db.prepare('SELECT id, name, material, category_id FROM products WHERE id = ?').bind(item.product_id).first() : null;
+    const color = item.color_id ? await db.prepare('SELECT id, name, hex FROM colors WHERE id = ?').bind(item.color_id).first() : null;
+    const size = item.size_id ? await db.prepare('SELECT id, dimensions FROM sizes WHERE id = ?').bind(item.size_id).first() : null;
+    const category = product?.category_id ? await db.prepare('SELECT id, name FROM categories WHERE id = ?').bind(product.category_id).first() : null;
+
+    return {
+      ...item,
+      product_name: product?.name ?? null,
+      product_material: product?.material ?? null,
+      category_name: category?.name ?? null,
+      color_name: color?.name ?? null,
+      color_hex: color?.hex ?? null,
+      size_dimensions: size?.dimensions ?? null,
+    };
+  }));
+
   return c.json({ order, items });
 });
 
@@ -729,7 +753,6 @@ apiRoutes.post('/orders', async (c) => {
         color_id: item.color_id,
         size_id: item.size_id,
         quantity: item.quantity,
-        price: item.price,
       });
     }
   }
@@ -786,7 +809,6 @@ apiRoutes.post('/orders/:orderId/items', async (c) => {
     color_id: body.color_id,
     size_id: body.size_id,
     quantity: body.quantity,
-    price: body.price,
   });
 
   return c.json({ item }, 201);

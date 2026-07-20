@@ -13,9 +13,7 @@ export class OrdersDB {
     return {
       id: Number(row.id),
       customer_id: String(row.customer_id),
-      total: Number(row.total),
       payment_status: row.payment_status as 'pending' | 'paid',
-      fulfillment_status: row.fulfillment_status as 'processing' | 'shipped' | 'delivered',
       notes: row.notes != null ? String(row.notes) : null,
       created_at: String(row.created_at),
       updated_at: String(row.updated_at),
@@ -25,13 +23,11 @@ export class OrdersDB {
   async create(input: CreateOrderInput): Promise<Order> {
     const now = nowJalali();
     const result = await this.db.prepare(`
-      INSERT INTO orders (customer_id, total, payment_status, fulfillment_status, notes, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO orders (customer_id, payment_status, notes, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?)
     `).bind(
       input.customer_id,
-      input.total ?? 0,
       input.payment_status ?? 'pending',
-      input.fulfillment_status ?? 'processing',
       input.notes ?? null,
       now,
       now,
@@ -68,9 +64,7 @@ export class OrdersDB {
     const fields: string[] = [];
     const values: unknown[] = [];
 
-    if (input.total !== undefined) { fields.push('total = ?'); values.push(input.total); }
     if (input.payment_status !== undefined) { fields.push('payment_status = ?'); values.push(input.payment_status); }
-    if (input.fulfillment_status !== undefined) { fields.push('fulfillment_status = ?'); values.push(input.fulfillment_status); }
     if (input.notes !== undefined) { fields.push('notes = ?'); values.push(input.notes); }
 
     if (fields.length === 0) return this.getById(id);

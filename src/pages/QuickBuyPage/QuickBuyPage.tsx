@@ -1,10 +1,13 @@
 import { type FC, useState, useEffect, useCallback, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Page } from '@/components/Page.tsx';
+import { useAuth } from '@/context/AuthContext';
 import {
   getCategories,
   getProducts,
   getProductColors,
   getProductSizes,
+  createOrder,
   type Category,
   type Product,
   type Color,
@@ -30,12 +33,16 @@ export interface SelectedItem {
 }
 
 export const QuickBuyPage: FC = () => {
+  const { customer } = useAuth();
+  const navigate = useNavigate();
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<ProductWithRelations[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedItems, setSelectedItems] = useState<Map<string, SelectedItem>>(new Map());
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
 
   useEffect(() => {
     getCategories().then((res) => setCategories(res.categories)).catch(() => {});
@@ -135,10 +142,36 @@ export const QuickBuyPage: FC = () => {
     return total;
   }, [selectedItems]);
 
-  const handleSubmit = useCallback(() => {
-    // TODO: implement order submission
-    console.log('Order submitted:', orderSummary);
-  }, [orderSummary]);
+  const handleSubmit = useCallback(async () => {
+    if (!customer || submitting || selectedItems.size === 0) return;
+
+    setSubmitting(true);
+    setSubmitSuccess(false);
+
+    try {
+      const items = Array.from(selectedItems.values()).map((item) => ({
+        product_id: item.productId,
+        color_id: item.colorId,
+        size_id: item.sizeId,
+        quantity: item.quantity,
+      }));
+
+      await createOrder({
+        customer_id: customer.id,
+        items,
+      });
+
+      setSubmitSuccess(true);
+      setSelectedItems(new Map());
+
+      setTimeout(() => {
+        navigate('/');
+      }, 1500);
+    } catch (err) {
+      console.error('Order submission failed:', err);
+      setSubmitting(false);
+    }
+  }, [customer, submitting, selectedItems, navigate]);
 
   return (
     <Page back={true}>
@@ -195,7 +228,22 @@ export const QuickBuyPage: FC = () => {
           )}
         </div>
 
-        {orderSummary.length > 0 && (
+        {submitSuccess && (
+          <div className="quickbuy-success-overlay">
+            <div className="quickbuy-success-card">
+              <div className="quickbuy-success-icon">
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#22C55E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                  <polyline points="22 4 12 14.01 9 11.01" />
+                </svg>
+              </div>
+              <h3 className="quickbuy-success-title">سفارش با موفقیت ثبت شد!</h3>
+              <p className="quickbuy-success-text">در حال انتقال به صفحه اصلی...</p>
+            </div>
+          </div>
+        )}
+
+        {orderSummary.length > 0 && !submitSuccess && (
           <div className="quickbuy-order-summary">
             <div className="quickbuy-order-header">
               <h3 className="quickbuy-order-title">خلاصه سفارش</h3>
@@ -223,8 +271,12 @@ export const QuickBuyPage: FC = () => {
               </div>
             ))}
 
-            <button className="quickbuy-submit-btn" onClick={handleSubmit}>
-              ثبت سفارش
+            <button
+              className="quickbuy-submit-btn"
+              onClick={handleSubmit}
+              disabled={submitting || selectedItems.size === 0}
+            >
+              {submitting ? 'در حال ثبت...' : 'ثبت سفارش'}
             </button>
           </div>
         )}

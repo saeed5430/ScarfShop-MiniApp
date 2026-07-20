@@ -13,8 +13,8 @@ export async function runMigrations(db: D1Database): Promise<void> {
     `CREATE TABLE IF NOT EXISTS sizes (id INTEGER PRIMARY KEY AUTOINCREMENT, dimensions TEXT NOT NULL, created_at INTEGER DEFAULT (unixepoch()), updated_at INTEGER DEFAULT (unixepoch()))`,
     `CREATE TABLE IF NOT EXISTS product_colors (product_id INTEGER NOT NULL, color_id INTEGER NOT NULL, PRIMARY KEY (product_id, color_id), FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE, FOREIGN KEY (color_id) REFERENCES colors(id) ON DELETE CASCADE)`,
     `CREATE TABLE IF NOT EXISTS product_sizes (product_id INTEGER NOT NULL, size_id INTEGER NOT NULL, PRIMARY KEY (product_id, size_id), FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE, FOREIGN KEY (size_id) REFERENCES sizes(id) ON DELETE CASCADE)`,
-    `CREATE TABLE IF NOT EXISTS orders (id INTEGER PRIMARY KEY AUTOINCREMENT, customer_id TEXT NOT NULL, total INTEGER NOT NULL DEFAULT 0, payment_status TEXT NOT NULL DEFAULT 'pending' CHECK(payment_status IN ('pending', 'paid')), fulfillment_status TEXT NOT NULL DEFAULT 'processing' CHECK(fulfillment_status IN ('processing', 'shipped', 'delivered')), notes TEXT, created_at INTEGER DEFAULT (unixepoch()), updated_at INTEGER DEFAULT (unixepoch()), FOREIGN KEY (customer_id) REFERENCES customers(id))`,
-    `CREATE TABLE IF NOT EXISTS order_items (id INTEGER PRIMARY KEY AUTOINCREMENT, order_id INTEGER NOT NULL, product_id INTEGER NOT NULL, color_id INTEGER, size_id INTEGER, quantity INTEGER NOT NULL DEFAULT 1, price INTEGER NOT NULL DEFAULT 0, FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE, FOREIGN KEY (product_id) REFERENCES products(id), FOREIGN KEY (color_id) REFERENCES colors(id), FOREIGN KEY (size_id) REFERENCES sizes(id))`,
+    `CREATE TABLE IF NOT EXISTS orders (id INTEGER PRIMARY KEY AUTOINCREMENT, customer_id TEXT NOT NULL, payment_status TEXT NOT NULL DEFAULT 'pending' CHECK(payment_status IN ('pending', 'paid')), notes TEXT, created_at INTEGER DEFAULT (unixepoch()), updated_at INTEGER DEFAULT (unixepoch()), FOREIGN KEY (customer_id) REFERENCES customers(id))`,
+    `CREATE TABLE IF NOT EXISTS order_items (id INTEGER PRIMARY KEY AUTOINCREMENT, order_id INTEGER NOT NULL, product_id INTEGER NOT NULL, color_id INTEGER, size_id INTEGER, quantity INTEGER NOT NULL DEFAULT 1, FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE, FOREIGN KEY (product_id) REFERENCES products(id), FOREIGN KEY (color_id) REFERENCES colors(id), FOREIGN KEY (size_id) REFERENCES sizes(id))`,
     `CREATE TABLE IF NOT EXISTS coupons (id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT UNIQUE NOT NULL, discount INTEGER NOT NULL DEFAULT 0, type TEXT NOT NULL DEFAULT 'percentage' CHECK(type IN ('percentage', 'fixed')), expires_at INTEGER, is_active INTEGER DEFAULT 1, created_at INTEGER DEFAULT (unixepoch()), updated_at INTEGER DEFAULT (unixepoch()))`,
     `CREATE TABLE IF NOT EXISTS settings (id INTEGER PRIMARY KEY AUTOINCREMENT, key TEXT UNIQUE NOT NULL, value TEXT, type TEXT DEFAULT 'text' CHECK(type IN ('text', 'image', 'boolean', 'json')), label TEXT NOT NULL, created_at INTEGER DEFAULT (unixepoch()), updated_at INTEGER DEFAULT (unixepoch()))`,
     `CREATE INDEX IF NOT EXISTS idx_sessions_customer_id ON sessions(customer_id)`,
@@ -29,10 +29,10 @@ export async function runMigrations(db: D1Database): Promise<void> {
     `CREATE INDEX IF NOT EXISTS idx_products_slug ON products(slug)`,
     `CREATE INDEX IF NOT EXISTS idx_orders_customer ON orders(customer_id)`,
     `CREATE INDEX IF NOT EXISTS idx_orders_payment ON orders(payment_status)`,
-    `CREATE INDEX IF NOT EXISTS idx_orders_fulfillment ON orders(fulfillment_status)`,
     `CREATE INDEX IF NOT EXISTS idx_order_items_order ON order_items(order_id)`,
     `CREATE INDEX IF NOT EXISTS idx_coupons_code ON coupons(code)`,
     `INSERT OR IGNORE INTO admins (id, username, email, first_name, created_at, updated_at) VALUES ('admin_saeed54300', 'saeed54300', 'admin@armana.ir', 'سعید', unixepoch(), unixepoch())`,
+    `INSERT OR IGNORE INTO customers (id, user_type, first_name, last_name, username, language_code, is_premium, created_at, last_active) VALUES ('demo_123456789', 'regular', 'سعید', 'احمدی', 'saeed54300', 'fa', 0, unixepoch(), unixepoch())`,
   ];
 
   for (const sql of stmts) {
