@@ -1,8 +1,8 @@
 import { Edit, useForm, useSelect } from "@refinedev/antd";
-import { Form, Input, Select, Switch, Card, Button, Space, Modal, ColorPicker, message, Tag, Upload as AntUpload } from "antd";
+import { Form, Input, Select, Switch, Card, Button, Space, Modal, ColorPicker, message, Tag } from "antd";
 import { useState, useEffect } from "react";
 import { PlusOutlined } from "@ant-design/icons";
-import type { UploadFile } from "antd";
+import { MultiImageUploader, type ImageData } from "../../components/ImageUploader/multi";
 
 const persianToSlug = (text: string): string => {
   const persianMap: Record<string, string> = {
@@ -39,7 +39,7 @@ export const ProductEdit: React.FC = () => {
   const [newSize, setNewSize] = useState({ dimensions: "" });
   const [creatingColor, setCreatingColor] = useState(false);
   const [creatingSize, setCreatingSize] = useState(false);
-  const [imageList, setImageList] = useState<UploadFile[]>([]);
+  const [imageList, setImageList] = useState<ImageData[]>([]);
 
   const productData = queryResult?.data?.data;
 
@@ -58,34 +58,9 @@ export const ProductEdit: React.FC = () => {
         color_ids: productData.color_ids || [],
         size_ids: productData.size_ids || [],
       });
-      const existingImages = (productData.images || []).map((url: string, i: number) => ({
-        uid: `-${i}`,
-        name: `image-${i}`,
-        status: "done" as const,
-        url,
-      }));
-      setImageList(existingImages);
+      setImageList(productData.images || []);
     }
   }, [productData, formProps.form]);
-
-  const handleImageChange = ({ fileList }: { fileList: UploadFile[] }) => {
-    setImageList(fileList);
-  };
-
-  const beforeUpload = (file: File) => {
-    const isImage = file.type.startsWith("image/");
-    if (!isImage) {
-      message.error("فقط فایل‌های تصویری مجاز هستند");
-      return false;
-    }
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const url = e.target?.result as string;
-      setImageList((prev) => [...prev, { uid: `-${Date.now()}`, name: file.name, status: "done", url }]);
-    };
-    reader.readAsDataURL(file);
-    return false;
-  };
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const name = e.target.value;
@@ -152,10 +127,9 @@ export const ProductEdit: React.FC = () => {
       <Form
         {...formProps}
         onFinish={async (values) => {
-          const imageUrls = imageList.filter(f => f.url).map(f => f.url!);
           await formProps.onFinish?.({
             ...values,
-            images: imageUrls,
+            images: imageList,
           });
         }}
         layout="vertical"
@@ -238,21 +212,12 @@ export const ProductEdit: React.FC = () => {
         </Card>
 
         <Card title="تصاویر" size="small" style={{ marginBottom: 16 }}>
-          <AntUpload
-            listType="picture-card"
-            fileList={imageList}
-            onChange={handleImageChange}
-            beforeUpload={beforeUpload}
-            multiple
-          >
-            {imageList.length >= 8 ? null : (
-              <div>
-                <PlusOutlined />
-                <div style={{ marginTop: 8 }}>افزودن تصویر</div>
-              </div>
-            )}
-          </AntUpload>
-          <div style={{ color: "#999", fontSize: 12 }}>حداکثر ۸ تصویر - فرمت‌های JPG, PNG, WebP</div>
+          <MultiImageUploader
+            value={imageList}
+            onChange={setImageList}
+            folder="products"
+            maxCount={8}
+          />
         </Card>
 
         <Card title="وضعیت" size="small">

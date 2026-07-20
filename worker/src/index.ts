@@ -3,6 +3,7 @@ import { cors } from 'hono/cors';
 import { apiRoutes } from './routes/api';
 import { adminAuthRoutes } from './routes/admin-auth';
 import { authRoutes } from './routes/auth';
+import { uploadRoutes } from './routes/upload-image';
 import { telegramRoutes } from './routes/telegram';
 import { runMigrations } from './db/migrate';
 
@@ -11,6 +12,9 @@ type Bindings = {
   TELEGRAM_BOT_TOKEN: string;
   BASE_URL: string;
   DB: D1Database;
+  IMAGEKIT_PRIVATE_KEY: string;
+  IMAGEKIT_PUBLIC_KEY: string;
+  IMAGEKIT_URL_ENDPOINT: string;
 };
 
 const app = new Hono<{ Bindings: Bindings }>();
@@ -28,6 +32,7 @@ app.use('/api/*', cors(), async (c, next) => {
 app.route('/api', apiRoutes);
 app.route('/api/admin-auth', adminAuthRoutes);
 app.route('/api/auth', authRoutes);
+app.route('/api/upload', uploadRoutes);
 app.route('/webhook/telegram', telegramRoutes);
 
 app.get('*', async (c) => {

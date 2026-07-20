@@ -1,5 +1,4 @@
 import { type FC, useCallback } from 'react';
-import type { Variant } from '@/api/client.ts';
 import type { SelectedItem } from './QuickBuyPage.tsx';
 
 import './ColorCell.css';
@@ -31,7 +30,7 @@ const COLOR_MAP: Record<string, string> = {
 };
 
 interface ColorCellProps {
-  variant: Variant;
+  colorName: string;
   isSelected: boolean;
   item: SelectedItem | undefined;
   onToggle: () => void;
@@ -39,14 +38,14 @@ interface ColorCellProps {
 }
 
 export const ColorCell: FC<ColorCellProps> = ({
-  variant,
+  colorName,
   isSelected,
   item,
   onToggle,
   onUpdateQty,
 }) => {
-  const bgColor = COLOR_MAP[variant.color] || '#9CA3AF';
-  const isLight = ['سفید', 'کرمی', 'زرد', 'صورتی', 'نعناعی', 'طوسی روشن', 'بژ', 'یاسی'].includes(variant.color);
+  const bgColor = COLOR_MAP[colorName] || '#9CA3AF';
+  const isLight = ['سفید', 'کرمی', 'زرد', 'صورتی', 'نعناعی', 'طوسی روشن', 'بژ', 'یاسی'].includes(colorName);
 
   const handleMinus = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
@@ -69,7 +68,7 @@ export const ColorCell: FC<ColorCellProps> = ({
         className={`color-dot ${isLight ? 'color-dot--light' : ''}`}
         style={{ backgroundColor: bgColor }}
       />
-      <span className="color-name">{variant.color}</span>
+      <span className="color-name">{colorName}</span>
       {isSelected && (
         <div className="color-qty" onClick={(e) => e.stopPropagation()}>
           <button className="color-qty-btn" onClick={handleMinus}>−</button>

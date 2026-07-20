@@ -115,9 +115,11 @@ export interface Product {
   is_active: boolean;
   material: string;
   images: string[];
-  price: number;
-  stock: number;
+  is_stock: boolean;
   sku: string | null;
+  color_count: number;
+  size_count: number;
+  category_name: string;
   created_at: string;
   updated_at: string;
 }
@@ -128,6 +130,14 @@ export async function getProducts(categoryId?: number, search?: string): Promise
   if (search) params.set('search', search);
   const qs = params.toString();
   return apiRequest(`/api/products${qs ? `?${qs}` : ''}`);
+}
+
+export async function getProductColors(productId: number): Promise<{ colors: Color[] }> {
+  return apiRequest(`/api/products/${productId}/colors`);
+}
+
+export async function getProductSizes(productId: number): Promise<{ sizes: Size[] }> {
+  return apiRequest(`/api/products/${productId}/sizes`);
 }
 
 // Designs (standalone - no FK to products)
@@ -141,29 +151,6 @@ export interface Design {
 
 export async function getDesigns(): Promise<{ items: Design[]; total: number }> {
   return apiRequest('/api/designs');
-}
-
-// Variants
-
-export interface Variant {
-  id: number;
-  product_id: number;
-  design_id: number | null;
-  slug: string;
-  color: string;
-  size: string;
-  is_stock: boolean;
-  images: string[];
-  created_at: string;
-  updated_at: string;
-}
-
-export async function getVariants(productId?: number, inStock?: boolean): Promise<{ items: Variant[]; total: number }> {
-  const params = new URLSearchParams();
-  if (productId) params.set('product_id', String(productId));
-  if (inStock) params.set('in_stock', 'true');
-  const qs = params.toString();
-  return apiRequest(`/api/variants${qs ? `?${qs}` : ''}`);
 }
 
 // Colors
