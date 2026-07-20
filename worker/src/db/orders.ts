@@ -12,7 +12,7 @@ export class OrdersDB {
   private parseRow(row: Record<string, unknown>): Order {
     return {
       id: Number(row.id),
-      customer_id: String(row.customer_id),
+      user_id: String(row.user_id),
       payment_status: row.payment_status as 'pending' | 'paid',
       notes: row.notes != null ? String(row.notes) : null,
       created_at: String(row.created_at),
@@ -23,10 +23,10 @@ export class OrdersDB {
   async create(input: CreateOrderInput): Promise<Order> {
     const now = nowJalali();
     const result = await this.db.prepare(`
-      INSERT INTO orders (customer_id, payment_status, notes, created_at, updated_at)
+      INSERT INTO orders (user_id, payment_status, notes, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?)
     `).bind(
-      input.customer_id,
+      input.user_id,
       input.payment_status ?? 'pending',
       input.notes ?? null,
       now,
@@ -48,10 +48,10 @@ export class OrdersDB {
     return results.map((r) => this.parseRow(r));
   }
 
-  async listByCustomer(customerId: string): Promise<Order[]> {
+  async listByUser(userId: string): Promise<Order[]> {
     const { results } = await this.db.prepare(
-      'SELECT * FROM orders WHERE customer_id = ? ORDER BY created_at DESC'
-    ).bind(customerId).all();
+      'SELECT * FROM orders WHERE user_id = ? ORDER BY created_at DESC'
+    ).bind(userId).all();
     return results.map((r) => this.parseRow(r));
   }
 

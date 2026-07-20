@@ -1,6 +1,6 @@
 import { DataProvider } from "@refinedev/core";
 
-const API_URL = "http://localhost:8787";
+const API_URL = "https://scarf-mini-app.abdollahi003.workers.dev";
 
 const getToken = () => localStorage.getItem("admin_token");
 

@@ -200,7 +200,7 @@ export const AdminPanelPage: FC = () => {
 
         <div className="admin-panel-actions">
           <a
-            href="http://localhost:3000"
+            href="https://scarf-admin.pages.dev"
             target="_blank"
             rel="noopener noreferrer"
             className="admin-action-card"

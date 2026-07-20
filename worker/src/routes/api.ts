@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { Database } from '../db';
 import { authenticateCustomer, validateSession } from '../auth';
+import { requireAdmin } from '../middleware/admin-auth';
 
 type Bindings = {
   DB: D1Database;
@@ -157,7 +158,7 @@ apiRoutes.get('/categories', async (c) => {
   return c.json({ categories: categoriesWithCount, total: categoriesWithCount.length });
 });
 
-apiRoutes.post('/categories', async (c) => {
+apiRoutes.post('/categories', requireAdmin, async (c) => {
   const db = c.env.DB;
   if (!db) return c.json({ error: 'Database not configured' }, 500);
 
@@ -168,7 +169,7 @@ apiRoutes.post('/categories', async (c) => {
   return c.json({ category }, 201);
 });
 
-apiRoutes.put('/categories/:id', async (c) => {
+apiRoutes.put('/categories/:id', requireAdmin, async (c) => {
   const db = c.env.DB;
   if (!db) return c.json({ error: 'Database not configured' }, 500);
 
@@ -181,7 +182,7 @@ apiRoutes.put('/categories/:id', async (c) => {
   return c.json({ category });
 });
 
-apiRoutes.delete('/categories/:id', async (c) => {
+apiRoutes.delete('/categories/:id', requireAdmin, async (c) => {
   const db = c.env.DB;
   if (!db) return c.json({ error: 'Database not configured' }, 500);
 
@@ -274,7 +275,7 @@ apiRoutes.get('/products/:id', async (c) => {
   });
 });
 
-apiRoutes.post('/products', async (c) => {
+apiRoutes.post('/products', requireAdmin, async (c) => {
   const db = c.env.DB;
   if (!db) return c.json({ error: 'Database not configured' }, 500);
 
@@ -294,7 +295,7 @@ apiRoutes.post('/products', async (c) => {
   return c.json({ product }, 201);
 });
 
-apiRoutes.put('/products/:id', async (c) => {
+apiRoutes.put('/products/:id', requireAdmin, async (c) => {
   const db = c.env.DB;
   if (!db) return c.json({ error: 'Database not configured' }, 500);
 
@@ -316,7 +317,7 @@ apiRoutes.put('/products/:id', async (c) => {
   return c.json({ product });
 });
 
-apiRoutes.delete('/products/:id', async (c) => {
+apiRoutes.delete('/products/:id', requireAdmin, async (c) => {
   const db = c.env.DB;
   if (!db) return c.json({ error: 'Database not configured' }, 500);
 
@@ -340,7 +341,7 @@ apiRoutes.get('/products/:id/colors', async (c) => {
   return c.json({ colors: colors.filter(Boolean) });
 });
 
-apiRoutes.put('/products/:id/colors', async (c) => {
+apiRoutes.put('/products/:id/colors', requireAdmin, async (c) => {
   const db = c.env.DB;
   if (!db) return c.json({ error: 'Database not configured' }, 500);
 
@@ -366,7 +367,7 @@ apiRoutes.get('/products/:id/sizes', async (c) => {
   return c.json({ sizes: sizes.filter(Boolean) });
 });
 
-apiRoutes.put('/products/:id/sizes', async (c) => {
+apiRoutes.put('/products/:id/sizes', requireAdmin, async (c) => {
   const db = c.env.DB;
   if (!db) return c.json({ error: 'Database not configured' }, 500);
 
@@ -402,7 +403,7 @@ apiRoutes.get('/designs/:id', async (c) => {
   return c.json({ design });
 });
 
-apiRoutes.post('/designs', async (c) => {
+apiRoutes.post('/designs', requireAdmin, async (c) => {
   const db = c.env.DB;
   if (!db) return c.json({ error: 'Database not configured' }, 500);
 
@@ -413,7 +414,7 @@ apiRoutes.post('/designs', async (c) => {
   return c.json({ design }, 201);
 });
 
-apiRoutes.put('/designs/:id', async (c) => {
+apiRoutes.put('/designs/:id', requireAdmin, async (c) => {
   const db = c.env.DB;
   if (!db) return c.json({ error: 'Database not configured' }, 500);
 
@@ -426,7 +427,7 @@ apiRoutes.put('/designs/:id', async (c) => {
   return c.json({ design });
 });
 
-apiRoutes.delete('/designs/:id', async (c) => {
+apiRoutes.delete('/designs/:id', requireAdmin, async (c) => {
   const db = c.env.DB;
   if (!db) return c.json({ error: 'Database not configured' }, 500);
 
@@ -450,7 +451,7 @@ apiRoutes.get('/settings', async (c) => {
   return c.json({ settings });
 });
 
-apiRoutes.put('/settings', async (c) => {
+apiRoutes.put('/settings', requireAdmin, async (c) => {
   const db = c.env.DB;
   if (!db) return c.json({ error: 'Database not configured' }, 500);
 
@@ -466,7 +467,7 @@ apiRoutes.put('/settings', async (c) => {
   return c.json({ setting });
 });
 
-apiRoutes.put('/settings/bulk', async (c) => {
+apiRoutes.put('/settings/bulk', requireAdmin, async (c) => {
   const db = c.env.DB;
   if (!db) return c.json({ error: 'Database not configured' }, 500);
 
@@ -508,7 +509,7 @@ apiRoutes.get('/admins/:id', async (c) => {
   return c.json({ admin });
 });
 
-apiRoutes.post('/admins', async (c) => {
+apiRoutes.post('/admins', requireAdmin, async (c) => {
   const db = c.env.DB;
   if (!db) return c.json({ error: 'Database not configured' }, 500);
 
@@ -519,11 +520,11 @@ apiRoutes.post('/admins', async (c) => {
   return c.json({ admin }, 201);
 });
 
-apiRoutes.put('/admins/:id', async (c) => {
+apiRoutes.put('/admins/:id', requireAdmin, async (c) => {
   const db = c.env.DB;
   if (!db) return c.json({ error: 'Database not configured' }, 500);
 
-  const id = c.req.param('id');
+  const id = c.req.param('id') ?? '';
   const body = await c.req.json();
   const database = new Database(db);
   const admin = await database.admins.update(id, body);
@@ -532,11 +533,11 @@ apiRoutes.put('/admins/:id', async (c) => {
   return c.json({ admin });
 });
 
-apiRoutes.delete('/admins/:id', async (c) => {
+apiRoutes.delete('/admins/:id', requireAdmin, async (c) => {
   const db = c.env.DB;
   if (!db) return c.json({ error: 'Database not configured' }, 500);
 
-  const id = c.req.param('id');
+  const id = c.req.param('id') ?? '';
   const database = new Database(db);
   const deleted = await database.admins.delete(id);
 
@@ -573,7 +574,7 @@ apiRoutes.get('/colors/:id', async (c) => {
   return c.json({ item });
 });
 
-apiRoutes.post('/colors', async (c) => {
+apiRoutes.post('/colors', requireAdmin, async (c) => {
   const db = c.env.DB;
   if (!db) return c.json({ error: 'Database not configured' }, 500);
 
@@ -584,7 +585,7 @@ apiRoutes.post('/colors', async (c) => {
   return c.json({ item }, 201);
 });
 
-apiRoutes.put('/colors/:id', async (c) => {
+apiRoutes.put('/colors/:id', requireAdmin, async (c) => {
   const db = c.env.DB;
   if (!db) return c.json({ error: 'Database not configured' }, 500);
 
@@ -597,7 +598,7 @@ apiRoutes.put('/colors/:id', async (c) => {
   return c.json({ item });
 });
 
-apiRoutes.delete('/colors/:id', async (c) => {
+apiRoutes.delete('/colors/:id', requireAdmin, async (c) => {
   const db = c.env.DB;
   if (!db) return c.json({ error: 'Database not configured' }, 500);
 
@@ -644,7 +645,7 @@ apiRoutes.get('/sizes/:id', async (c) => {
   return c.json({ item });
 });
 
-apiRoutes.post('/sizes', async (c) => {
+apiRoutes.post('/sizes', requireAdmin, async (c) => {
   const db = c.env.DB;
   if (!db) return c.json({ error: 'Database not configured' }, 500);
 
@@ -655,7 +656,7 @@ apiRoutes.post('/sizes', async (c) => {
   return c.json({ item }, 201);
 });
 
-apiRoutes.put('/sizes/:id', async (c) => {
+apiRoutes.put('/sizes/:id', requireAdmin, async (c) => {
   const db = c.env.DB;
   if (!db) return c.json({ error: 'Database not configured' }, 500);
 
@@ -668,7 +669,7 @@ apiRoutes.put('/sizes/:id', async (c) => {
   return c.json({ item });
 });
 
-apiRoutes.delete('/sizes/:id', async (c) => {
+apiRoutes.delete('/sizes/:id', requireAdmin, async (c) => {
   const db = c.env.DB;
   if (!db) return c.json({ error: 'Database not configured' }, 500);
 
@@ -760,7 +761,7 @@ apiRoutes.post('/orders', async (c) => {
   return c.json({ order }, 201);
 });
 
-apiRoutes.put('/orders/:id', async (c) => {
+apiRoutes.put('/orders/:id', requireAdmin, async (c) => {
   const db = c.env.DB;
   if (!db) return c.json({ error: 'Database not configured' }, 500);
 
@@ -773,7 +774,7 @@ apiRoutes.put('/orders/:id', async (c) => {
   return c.json({ order });
 });
 
-apiRoutes.delete('/orders/:id', async (c) => {
+apiRoutes.delete('/orders/:id', requireAdmin, async (c) => {
   const db = c.env.DB;
   if (!db) return c.json({ error: 'Database not configured' }, 500);
 
@@ -814,7 +815,7 @@ apiRoutes.post('/orders/:orderId/items', async (c) => {
   return c.json({ item }, 201);
 });
 
-apiRoutes.delete('/order-items/:id', async (c) => {
+apiRoutes.delete('/order-items/:id', requireAdmin, async (c) => {
   const db = c.env.DB;
   if (!db) return c.json({ error: 'Database not configured' }, 500);
 
@@ -858,7 +859,7 @@ apiRoutes.get('/coupons/:id', async (c) => {
   return c.json({ coupon });
 });
 
-apiRoutes.post('/coupons', async (c) => {
+apiRoutes.post('/coupons', requireAdmin, async (c) => {
   const db = c.env.DB;
   if (!db) return c.json({ error: 'Database not configured' }, 500);
 
@@ -869,7 +870,7 @@ apiRoutes.post('/coupons', async (c) => {
   return c.json({ coupon }, 201);
 });
 
-apiRoutes.put('/coupons/:id', async (c) => {
+apiRoutes.put('/coupons/:id', requireAdmin, async (c) => {
   const db = c.env.DB;
   if (!db) return c.json({ error: 'Database not configured' }, 500);
 
@@ -882,7 +883,7 @@ apiRoutes.put('/coupons/:id', async (c) => {
   return c.json({ coupon });
 });
 
-apiRoutes.delete('/coupons/:id', async (c) => {
+apiRoutes.delete('/coupons/:id', requireAdmin, async (c) => {
   const db = c.env.DB;
   if (!db) return c.json({ error: 'Database not configured' }, 500);
 

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Show, DateField, TextField } from "@refinedev/antd";
+import { Show, TextField } from "@refinedev/antd";
 import { Button, Descriptions, Divider, Table, Tag, Typography, Space } from "antd";
 import { PersianDate } from "../../components/PersianDate";
 
@@ -26,7 +26,7 @@ interface OrderItemDetail {
 
 interface OrderDetail {
   id: number;
-  customer_id: string;
+  user_id: string;
   payment_status: string;
   notes: string | null;
   created_at: string;
@@ -43,7 +43,7 @@ export const OrderShow: React.FC = () => {
   useEffect(() => {
     if (!id) return;
     setLoading(true);
-    fetch(`http://localhost:8787/api/orders/${id}`)
+    fetch(`https://scarf-mini-app.abdollahi003.workers.dev/api/orders/${id}`)
       .then((res) => res.json())
       .then((data) => {
         setOrder(data.order);
@@ -142,7 +142,7 @@ export const OrderShow: React.FC = () => {
           <TextField value={String(order?.id ?? "")} />
         </Descriptions.Item>
         <Descriptions.Item label={<Title level={5} style={{ margin: 0 }}>مشتری</Title>}>
-          <TextField value={String(order?.customer_id ?? "")} />
+          <TextField value={String(order?.user_id ?? "")} />
         </Descriptions.Item>
         <Descriptions.Item label={<Title level={5} style={{ margin: 0 }}>وضعیت پرداخت</Title>}>
           <Tag color={paymentColors[order?.payment_status ?? "pending"]}>

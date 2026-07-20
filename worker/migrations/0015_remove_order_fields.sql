@@ -5,22 +5,21 @@
 
 PRAGMA foreign_keys = OFF;
 
--- 1. ایجاد جدول orders جدید
+-- 1. ایجاد جدول orders جدید (بدون total, fulfillment_status)
 CREATE TABLE orders_new (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    customer_id INTEGER NOT NULL,
+    user_id TEXT NOT NULL,
     payment_status TEXT NOT NULL DEFAULT 'pending' CHECK(payment_status IN ('pending', 'paid')),
     notes TEXT,
     created_at INTEGER DEFAULT (unixepoch()),
-    updated_at INTEGER DEFAULT (unixepoch()),
-    FOREIGN KEY (customer_id) REFERENCES customers(id)
+    updated_at INTEGER DEFAULT (unixepoch())
 );
 
 -- 2. انتقال داده‌ها
-INSERT INTO orders_new (id, customer_id, payment_status, notes, created_at, updated_at)
+INSERT INTO orders_new (id, user_id, payment_status, notes, created_at, updated_at)
 SELECT 
     id, 
-    customer_id, 
+    user_id, 
     COALESCE(payment_status, 'pending'), 
     notes, 
     created_at, 
@@ -32,7 +31,7 @@ DROP TABLE orders;
 ALTER TABLE orders_new RENAME TO orders;
 
 -- 4. ایندکس‌ها
-CREATE INDEX IF NOT EXISTS idx_orders_customer ON orders(customer_id);
+CREATE INDEX IF NOT EXISTS idx_orders_user ON orders(user_id);
 CREATE INDEX IF NOT EXISTS idx_orders_payment ON orders(payment_status);
 
 -- 5. ایجاد جدول order_items جدید (بدون price)

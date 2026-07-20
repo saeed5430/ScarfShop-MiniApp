@@ -210,7 +210,7 @@ export interface ProductSize {
 
 export interface Order {
   id: number;
-  customer_id: string;
+  user_id: string;
   payment_status: 'pending' | 'paid';
   notes: string | null;
   created_at: string;
@@ -218,7 +218,7 @@ export interface Order {
 }
 
 export interface CreateOrderInput {
-  customer_id: string;
+  user_id: string;
   payment_status?: 'pending' | 'paid';
   notes?: string;
 }

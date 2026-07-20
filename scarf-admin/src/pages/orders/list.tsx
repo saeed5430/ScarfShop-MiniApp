@@ -23,7 +23,7 @@ export const OrderList: React.FC = () => {
         mobileCardSubtitle={(record) => `${record.item_count ?? 0} ردیف — ${record.payment_status === 'paid' ? 'پرداخت شده' : 'پرداخت نشده'}`}
         columns={[
           { key: "id", title: "ID", dataIndex: "id", width: 60 },
-          { key: "customer_id", title: "مشتری", dataIndex: "customer_id" },
+          { key: "user_id", title: "مشتری", dataIndex: "user_id" },
           { key: "item_count", title: "اقلام", dataIndex: "item_count", width: 80, render: (v: number) => <span style={{ fontWeight: 600, color: "#7C3AED" }}>{v ?? 0}</span> },
           { key: "payment_status", title: "پرداخت", dataIndex: "payment_status", render: (v) => <Tag color={paymentColors[v]}>{paymentLabels[v]}</Tag> },
           { key: "created_at", title: "تاریخ", dataIndex: "created_at", render: (v) => <PersianDate value={v} /> },

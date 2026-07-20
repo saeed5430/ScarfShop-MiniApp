@@ -157,7 +157,7 @@ export const QuickBuyPage: FC = () => {
       }));
 
       await createOrder({
-        customer_id: customer.id,
+        user_id: customer.id,
         items,
       });
 

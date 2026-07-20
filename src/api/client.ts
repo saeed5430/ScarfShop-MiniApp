@@ -209,7 +209,7 @@ export async function setVariantSizes(variantId: number, sizeIds: number[]): Pro
 
 export interface Order {
   id: number;
-  customer_id: string;
+  user_id: string;
   payment_status: 'pending' | 'paid';
   notes: string | null;
   created_at: string;
@@ -234,7 +234,7 @@ export async function getOrder(id: number): Promise<{ order: Order; items: Order
   return apiRequest(`/api/orders/${id}`);
 }
 
-export async function createOrder(data: { customer_id: string; notes?: string; items: { product_id: number; color_id?: number; size_id?: number; quantity: number }[] }): Promise<{ order: Order }> {
+export async function createOrder(data: { user_id: string; notes?: string; items: { product_id: number; color_id?: number; size_id?: number; quantity: number }[] }): Promise<{ order: Order }> {
   return apiRequest('/api/orders', {
     method: 'POST',
     body: JSON.stringify(data),
