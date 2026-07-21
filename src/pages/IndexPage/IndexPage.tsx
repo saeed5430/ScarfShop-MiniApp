@@ -103,7 +103,7 @@ export const IndexPage: FC = () => {
             </div>
 
             {/* Admin Panel Card - Visible to all */}
-            <div className="action-card" onClick={() => window.open('http://localhost:3000/login', '_blank')}>
+            <div className="action-card" onClick={() => window.open('https://scarf-admin.pages.dev/login', '_blank')}>
               <div className="action-icon action-icon-admin">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
