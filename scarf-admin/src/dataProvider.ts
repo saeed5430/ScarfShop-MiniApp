@@ -4,6 +4,15 @@ const API_URL = "https://scarf-mini-app.abdollahi003.workers.dev";
 
 const getToken = () => localStorage.getItem("admin_token");
 
+class ApiError extends Error {
+  status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.status = status;
+    this.name = "ApiError";
+  }
+}
+
 const fetchJson = async (url: string, options?: RequestInit) => {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -19,7 +28,7 @@ const fetchJson = async (url: string, options?: RequestInit) => {
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: "Request failed" }));
-    throw new Error(error.error || `HTTP ${response.status}`);
+    throw new ApiError(error.error || `HTTP ${response.status}`, response.status);
   }
 
   return response.json();

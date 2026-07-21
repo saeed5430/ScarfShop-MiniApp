@@ -6,6 +6,7 @@ import { authRoutes } from './routes/auth';
 import { uploadRoutes } from './routes/upload-image';
 import { telegramRoutes } from './routes/telegram';
 import { runMigrations } from './db/migrate';
+import { requireAdmin } from './middleware/admin-auth';
 
 type Bindings = {
   ASSETS: Fetcher;
@@ -21,7 +22,19 @@ const app = new Hono<{ Bindings: Bindings }>();
 
 let migrationsDone = false;
 
-app.use('/api/*', cors(), async (c, next) => {
+// CORS for all API routes
+app.use('/api/*', cors({
+  origin: [
+    'https://scarf-admin.pages.dev',
+    'http://localhost:3000',
+  ],
+  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+}));
+
+// Run migrations on first request
+app.use('/api/*', async (c, next) => {
   if (!migrationsDone && c.env.DB) {
     await runMigrations(c.env.DB);
     migrationsDone = true;
@@ -29,12 +42,21 @@ app.use('/api/*', cors(), async (c, next) => {
   await next();
 });
 
-app.route('/api', apiRoutes);
+// Public auth routes
 app.route('/api/admin-auth', adminAuthRoutes);
 app.route('/api/auth', authRoutes);
+
+// Admin-protected upload routes
+app.use('/api/upload/*', requireAdmin);
 app.route('/api/upload', uploadRoutes);
+
+// Main API routes (individual routes have their own auth middleware)
+app.route('/api', apiRoutes);
+
+// Telegram webhook (no auth needed)
 app.route('/webhook/telegram', telegramRoutes);
 
+// Serve frontend assets
 app.get('*', async (c) => {
   if (c.env.ASSETS) {
     const asset = await c.env.ASSETS.fetch(c.req.raw);
