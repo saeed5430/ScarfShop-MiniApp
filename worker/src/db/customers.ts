@@ -11,14 +11,6 @@ export class CustomersDB {
     const stmt = this.db.prepare(`
       INSERT INTO customers (id, first_name, last_name, username, language_code, avatar_url, is_premium, invite_code, created_at, last_active)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      ON CONFLICT(id) DO UPDATE SET
-        first_name = excluded.first_name,
-        last_name = excluded.last_name,
-        username = excluded.username,
-        language_code = excluded.language_code,
-        avatar_url = excluded.avatar_url,
-        is_premium = excluded.is_premium,
-        last_active = excluded.last_active
     `);
 
     await stmt.bind(
@@ -35,6 +27,53 @@ export class CustomersDB {
     ).run();
 
     return this.findById(input.id) as Promise<Customer>;
+  }
+
+  // Update only Telegram-related fields (safe fields)
+  async updateTelegramFields(telegramUser: {
+    id: string;
+    first_name?: string;
+    last_name?: string;
+    username?: string;
+    language_code?: string;
+    photo_url?: string;
+    is_premium?: boolean;
+  }): Promise<Customer | null> {
+    const existing = await this.findById(telegramUser.id);
+
+    if (!existing) {
+      // New customer - create with Telegram data
+      return this.create({
+        id: telegramUser.id,
+        first_name: telegramUser.first_name || 'کاربر',
+        last_name: telegramUser.last_name,
+        username: telegramUser.username,
+        language_code: telegramUser.language_code,
+        avatar_url: telegramUser.photo_url,
+        is_premium: telegramUser.is_premium,
+      });
+    }
+
+    // Existing customer - only update safe fields (NOT phone, address, postal_code)
+    const now = nowJalali();
+    const stmt = this.db.prepare(`
+      UPDATE customers SET
+        username = COALESCE(?, username),
+        language_code = COALESCE(?, language_code),
+        avatar_url = COALESCE(?, avatar_url),
+        last_active = ?
+      WHERE id = ?
+    `);
+
+    await stmt.bind(
+      telegramUser.username ?? null,
+      telegramUser.language_code ?? null,
+      telegramUser.photo_url ?? null,
+      now,
+      telegramUser.id,
+    ).run();
+
+    return this.findById(telegramUser.id);
   }
 
   async findById(id: string): Promise<Customer | null> {

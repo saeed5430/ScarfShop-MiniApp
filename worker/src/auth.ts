@@ -144,13 +144,14 @@ export async function authenticateCustomer(
 
   const customerId = String(telegramUser.id);
 
-  await database.customers.create({
+  // Use updateTelegramFields to preserve profile data (phone, address, etc.)
+  await database.customers.updateTelegramFields({
     id: customerId,
     first_name: telegramUser.first_name,
     last_name: telegramUser.last_name,
     username: telegramUser.username,
     language_code: telegramUser.language_code,
-    avatar_url: telegramUser.photo_url,
+    photo_url: telegramUser.photo_url,
     is_premium: telegramUser.is_premium,
   });
 
