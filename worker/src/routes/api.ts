@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { Database } from '../db';
 import { authenticateCustomer, validateSession } from '../auth';
 import { requireAdmin } from '../middleware/admin-auth';
+import { requireCustomer } from '../middleware/customer-auth';
 
 type Bindings = {
   DB: D1Database;
@@ -127,15 +128,26 @@ apiRoutes.get('/customers/:id', async (c) => {
 
 // Chats routes
 
-apiRoutes.get('/chats/:customerId', async (c) => {
+apiRoutes.get('/chats/:customerId', requireCustomer, async (c) => {
   const db = c.env.DB;
   if (!db) return c.json({ error: 'Database not configured' }, 500);
+
+  const authHeader = c.req.header('Authorization');
+  const token = authHeader?.slice(7) || '';
+  const sessionResult = await validateSession(db, token);
+  const customerId = sessionResult.customer_id || '';
+  const requestedCustomerId = c.req.param('customerId');
+
+  // Users can only access their own chats
+  if (customerId !== requestedCustomerId) {
+    return c.json({ error: 'دسترسی غیرمجاز' }, 403);
+  }
 
   const database = new Database(db);
   const limit = parseInt(c.req.query('limit') || '50', 10);
   const offset = parseInt(c.req.query('offset') || '0', 10);
 
-  const messages = await database.chats.findByCustomerId(c.req.param('customerId'), limit, offset);
+  const messages = await database.chats.findByCustomerId(customerId, limit, offset);
   return c.json({ messages });
 });
 
@@ -738,13 +750,25 @@ apiRoutes.get('/orders/:id', async (c) => {
   return c.json({ order, items });
 });
 
-apiRoutes.post('/orders', async (c) => {
+apiRoutes.post('/orders', requireCustomer, async (c) => {
   const db = c.env.DB;
   if (!db) return c.json({ error: 'Database not configured' }, 500);
 
+  const authHeader = c.req.header('Authorization');
+  const token = authHeader?.slice(7) || '';
+  const sessionResult = await validateSession(db, token);
+  const customerId = sessionResult.customer_id || '';
+
   const body = await c.req.json();
   const database = new Database(db);
-  const order = await database.orders.create(body);
+
+  // Ensure user can only create orders for themselves
+  const orderData = {
+    ...body,
+    user_id: customerId,
+  };
+
+  const order = await database.orders.create(orderData);
 
   if (body.items && Array.isArray(body.items)) {
     for (const item of body.items) {

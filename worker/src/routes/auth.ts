@@ -1,135 +1,121 @@
-import { Hono } from "hono";
-import { createAuth } from "../auth/index";
+import { Hono } from 'hono';
+import { authenticateCustomer, validateSession } from '../auth';
+import { Database } from '../db';
 
 type Bindings = {
   DB: D1Database;
+  TELEGRAM_BOT_TOKEN: string;
 };
 
 export const authRoutes = new Hono<{ Bindings: Bindings }>();
 
-// Initialize auth tables
-authRoutes.post("/init", async (c) => {
+// Telegram Login - verifies initData and creates/extends session
+authRoutes.post('/login', async (c) => {
   const db = c.env.DB;
-  if (!db) return c.json({ error: "Database not configured" }, 500);
+  const botToken = c.env.TELEGRAM_BOT_TOKEN;
 
-  try {
-    const auth = createAuth(db);
-    await auth.adapter.init();
-    return c.json({ success: true, message: "Auth tables initialized" });
-  } catch (error) {
-    return c.json({ error: "Failed to initialize auth tables" }, 500);
+  if (!db) return c.json({ error: 'Database not configured' }, 500);
+  if (!botToken) return c.json({ error: 'Bot token not configured' }, 500);
+
+  const body = await c.req.json<{ initData: string }>();
+  if (!body.initData) {
+    return c.json({ error: 'initData is required' }, 400);
   }
+
+  const result = await authenticateCustomer(db, body.initData, botToken);
+
+  if (!result.success) {
+    return c.json({ error: result.error }, 401);
+  }
+
+  return c.json({
+    success: true,
+    customer_id: result.customer_id,
+    session_token: result.session_token,
+  });
 });
 
-// Sign up (simplified)
-authRoutes.post("/signup", async (c) => {
+// Get current customer info
+authRoutes.get('/me', async (c) => {
   const db = c.env.DB;
-  if (!db) return c.json({ error: "Database not configured" }, 500);
+  if (!db) return c.json({ error: 'Database not configured' }, 500);
 
-  const body = await c.req.json<{ email: string; password: string; name: string }>();
-  const { email, password, name } = body;
+  const token = c.req.header('Authorization')?.replace('Bearer ', '');
+  if (!token) return c.json({ error: 'Token required' }, 401);
 
-  if (!email || !password || !name) {
-    return c.json({ error: "ایمیل، رمز عبور و نام الزامی هستند" }, 400);
+  const result = await validateSession(db, token);
+  if (!result.valid) return c.json({ error: result.error }, 401);
+
+  const database = new Database(db);
+  const customer = await database.customers.findById(result.customer_id!);
+
+  if (!customer) {
+    return c.json({ error: 'Customer not found' }, 404);
   }
 
-  try {
-    const auth = createAuth(db);
-    const user = await auth.adapter.createUser({
-      id: crypto.randomUUID(),
-      email,
-      name,
-      emailVerified: false,
-    });
-
-    return c.json({ success: true, user });
-  } catch (error: any) {
-    return c.json({ error: error.message || "خطا در ثبت نام" }, 400);
-  }
+  return c.json({ customer });
 });
 
-// Sign in (simplified)
-authRoutes.post("/signin", async (c) => {
+// Check if customer is admin
+authRoutes.get('/is-admin', async (c) => {
   const db = c.env.DB;
-  if (!db) return c.json({ error: "Database not configured" }, 500);
+  if (!db) return c.json({ error: 'Database not configured' }, 500);
 
-  const body = await c.req.json<{ email: string; password: string }>();
-  const { email, password } = body;
+  const token = c.req.header('Authorization')?.replace('Bearer ', '');
+  if (!token) return c.json({ is_admin: false });
 
-  if (!email || !password) {
-    return c.json({ error: "ایمیل و رمز عبور الزامی هستند" }, 400);
-  }
+  const result = await validateSession(db, token);
+  if (!result.valid) return c.json({ is_admin: false });
 
-  try {
-    const auth = createAuth(db);
-    const user = await auth.adapter.getUserByEmail(email);
+  const database = new Database(db);
+  const isAdmin = await database.admins.isAdmin(result.customer_id!);
 
-    if (!user) {
-      return c.json({ error: "ایمیل یا رمز عبور اشتباه است" }, 401);
-    }
-
-    // For now, accept any password for demo
-    // In production, use proper password hashing
-    const token = crypto.randomUUID();
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-
-    await auth.adapter.createSession({
-      id: crypto.randomUUID(),
-      userId: user.id,
-      token,
-      expiresAt,
-    });
-
-    return c.json({
-      success: true,
-      token,
-      user,
-    });
-  } catch (error: any) {
-    return c.json({ error: error.message || "ایمیل یا رمز عبور اشتباه است" }, 401);
-  }
+  return c.json({ is_admin: isAdmin });
 });
 
-// Get current session
-authRoutes.get("/session", async (c) => {
+// Update customer profile
+authRoutes.put('/profile', async (c) => {
   const db = c.env.DB;
-  if (!db) return c.json({ error: "Database not configured" }, 500);
+  if (!db) return c.json({ error: 'Database not configured' }, 500);
 
-  const token = c.req.header("Authorization")?.replace("Bearer ", "");
-  if (!token) return c.json({ error: "Token required" }, 401);
+  const token = c.req.header('Authorization')?.replace('Bearer ', '');
+  if (!token) return c.json({ error: 'Token required' }, 401);
 
-  try {
-    const auth = createAuth(db);
-    const session = await auth.adapter.getSession(token);
+  const result = await validateSession(db, token);
+  if (!result.valid) return c.json({ error: result.error }, 401);
 
-    if (!session) {
-      return c.json({ error: "Invalid session" }, 401);
-    }
+  const body = await c.req.json<{
+    first_name?: string;
+    last_name?: string;
+    phone?: string;
+    address?: string;
+    postal_code?: string;
+  }>();
 
-    const user = await auth.adapter.getUser(session.userId);
-    if (!user) {
-      return c.json({ error: "User not found" }, 401);
-    }
+  const database = new Database(db);
+  const customer = await database.customers.update(result.customer_id!, body);
 
-    return c.json({ session, user });
-  } catch (error: any) {
-    return c.json({ error: error.message || "Invalid session" }, 401);
+  if (!customer) {
+    return c.json({ error: 'Customer not found' }, 404);
   }
+
+  return c.json({ customer });
 });
 
-// Sign out
-authRoutes.post("/signout", async (c) => {
+// Logout - delete session
+authRoutes.post('/logout', async (c) => {
   const db = c.env.DB;
-  if (!db) return c.json({ error: "Database not configured" }, 500);
+  if (!db) return c.json({ error: 'Database not configured' }, 500);
 
-  const token = c.req.header("Authorization")?.replace("Bearer ", "");
+  const token = c.req.header('Authorization')?.replace('Bearer ', '');
   if (!token) return c.json({ success: true });
 
-  try {
-    const auth = createAuth(db);
-    await auth.adapter.deleteSession(token);
-    return c.json({ success: true });
-  } catch (error: any) {
-    return c.json({ error: error.message || "خطا در خروج" }, 500);
+  const database = new Database(db);
+  const session = await database.sessions.findByToken(token);
+
+  if (session) {
+    await database.sessions.delete(session.session_id);
   }
+
+  return c.json({ success: true });
 });
