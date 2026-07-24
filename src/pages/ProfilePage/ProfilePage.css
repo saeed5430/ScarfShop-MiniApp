@@ -135,6 +135,17 @@
   color: var(--color-text-primary);
 }
 
+.profile-required {
+  color: #EF4444;
+  font-size: 14px;
+}
+
+.profile-optional {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  font-weight: 400;
+}
+
 .profile-input {
   height: 52px;
   padding: 0 16px;

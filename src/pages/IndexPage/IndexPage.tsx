@@ -10,13 +10,11 @@ export const IndexPage: FC = () => {
   const navigate = useNavigate();
   const { customer } = useAuth();
 
-  // Profile must have: phone, address, first_name, last_name, username
+  // Profile must have: phone, first_name, last_name (username comes from Telegram)
   const isProfileComplete = Boolean(
     customer?.phone &&
-    customer?.address &&
     customer?.first_name &&
-    customer?.last_name &&
-    customer?.username
+    customer?.last_name
   );
 
   return (

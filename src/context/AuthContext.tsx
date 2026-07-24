@@ -7,6 +7,7 @@ interface AuthContextType {
   isAdmin: boolean;
   loading: boolean;
   error: string | null;
+  refreshCustomer: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -14,6 +15,7 @@ const AuthContext = createContext<AuthContextType>({
   isAdmin: false,
   loading: true,
   error: null,
+  refreshCustomer: async () => {},
 });
 
 export function useAuth() {
@@ -64,8 +66,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  // Refresh customer data from server
+  async function refreshCustomer() {
+    try {
+      const res = await getCurrentCustomer();
+      setCustomer(res.customer);
+    } catch (err) {
+      console.error('Failed to refresh customer:', err);
+    }
+  }
+
   return (
-    <AuthContext.Provider value={{ customer, isAdmin, loading, error }}>
+    <AuthContext.Provider value={{ customer, isAdmin, loading, error, refreshCustomer }}>
       {children}
     </AuthContext.Provider>
   );

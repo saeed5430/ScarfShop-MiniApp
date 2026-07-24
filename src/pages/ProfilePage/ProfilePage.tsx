@@ -10,13 +10,10 @@ declare global {
   interface Window {
     Telegram?: {
       WebApp?: {
-        requestContact?: () => Promise<{
-          responseUnsafe?: {
-            contact?: {
-              phone_number?: string;
-            };
-          };
-        }>;
+        requestContact?: () => Promise<boolean>;
+        contact?: {
+          phone_number?: string;
+        };
       };
     };
   }
@@ -24,7 +21,7 @@ declare global {
 
 export const ProfilePage: FC = () => {
   const navigate = useNavigate();
-  const { customer, isAdmin } = useAuth();
+  const { customer, isAdmin, refreshCustomer } = useAuth();
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [phoneLoading, setPhoneLoading] = useState(false);
@@ -53,20 +50,24 @@ export const ProfilePage: FC = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  // Secure phone request via Telegram
   const handleRequestPhone = async () => {
     setPhoneLoading(true);
     try {
-      if (window.Telegram && window.Telegram.WebApp) {
-        const tg = window.Telegram.WebApp as any;
-        if (tg.requestContact) {
-          const result = await tg.requestContact();
-          if (result && result.responseUnsafe && result.responseUnsafe.contact) {
-            const contact = result.responseUnsafe.contact;
-            if (contact.phone_number) {
-              setFormData(prev => ({ ...prev, phone: contact.phone_number }));
-            }
-          }
+      const tg = window.Telegram?.WebApp;
+      if (tg?.requestContact) {
+        // Request contact permission from Telegram
+        const granted = await tg.requestContact();
+
+        if (granted && tg.contact?.phone_number) {
+          // Phone is verified by Telegram - secure
+          setFormData(prev => ({ ...prev, phone: tg.contact!.phone_number! }));
+        } else {
+          // User denied or error
+          console.log('Contact request denied or failed');
         }
+      } else {
+        console.log('Telegram WebApp not available');
       }
     } catch (err) {
       console.error('Failed to request contact:', err);
@@ -88,6 +89,10 @@ export const ProfilePage: FC = () => {
         address: formData.address,
         postal_code: formData.postal_code,
       });
+
+      // Refresh customer data from server
+      await refreshCustomer();
+
       setSuccess(true);
 
       // Navigate to home after 1.5 seconds
@@ -151,9 +156,11 @@ export const ProfilePage: FC = () => {
         </div>
 
         <form className="profile-form" onSubmit={handleSubmit}>
-          {/* Name Fields */}
+          {/* Required Fields */}
           <div className="profile-field">
-            <label className="profile-label">نام</label>
+            <label className="profile-label">
+              نام <span className="profile-required">*</span>
+            </label>
             <input
               type="text"
               name="first_name"
@@ -166,7 +173,9 @@ export const ProfilePage: FC = () => {
           </div>
 
           <div className="profile-field">
-            <label className="profile-label">نام خانوادگی</label>
+            <label className="profile-label">
+              نام خانوادگی <span className="profile-required">*</span>
+            </label>
             <input
               type="text"
               name="last_name"
@@ -178,9 +187,11 @@ export const ProfilePage: FC = () => {
             />
           </div>
 
-          {/* Phone Field */}
+          {/* Phone Field - Required */}
           <div className="profile-field">
-            <label className="profile-label">شماره تلفن</label>
+            <label className="profile-label">
+              شماره تلفن <span className="profile-required">*</span>
+            </label>
             <div className="profile-phone-row">
               <input
                 type="tel"
@@ -191,6 +202,7 @@ export const ProfilePage: FC = () => {
                 onChange={handleChange}
                 dir="ltr"
                 required
+                readOnly
               />
               <button
                 type="button"
@@ -203,9 +215,11 @@ export const ProfilePage: FC = () => {
             </div>
           </div>
 
-          {/* Address Field */}
+          {/* Optional Fields */}
           <div className="profile-field">
-            <label className="profile-label">آدرس</label>
+            <label className="profile-label">
+              آدرس <span className="profile-optional">(اختیاری)</span>
+            </label>
             <textarea
               name="address"
               className="profile-input profile-textarea"
@@ -213,13 +227,13 @@ export const ProfilePage: FC = () => {
               value={formData.address}
               onChange={handleChange}
               rows={3}
-              required
             />
           </div>
 
-          {/* Postal Code Field */}
           <div className="profile-field">
-            <label className="profile-label">کد پستی</label>
+            <label className="profile-label">
+              کد پستی <span className="profile-optional">(اختیاری)</span>
+            </label>
             <input
               type="text"
               name="postal_code"
@@ -228,14 +242,13 @@ export const ProfilePage: FC = () => {
               value={formData.postal_code}
               onChange={handleChange}
               dir="ltr"
-              required
             />
           </div>
 
           <button
             type="submit"
             className="profile-submit"
-            disabled={loading}
+            disabled={loading || !formData.phone || !formData.first_name || !formData.last_name}
           >
             {loading ? 'در حال ذخیره...' : 'ذخیره اطلاعات'}
           </button>
