@@ -813,7 +813,8 @@ apiRoutes.post('/orders', requireCustomer, async (c) => {
   if (orderNotifyBotToken) {
     try {
       const { sendOrderNotification } = await import('../services/notify');
-      await sendOrderNotification(db, orderNotifyBotToken, order.id, customerId, orderItems);
+      const result = await sendOrderNotification(db, orderNotifyBotToken, order.id, customerId, orderItems);
+      console.log(`Order ${order.id} notification: sent=${result.sent}, failed=${result.failed}`);
     } catch (error) {
       console.error('Failed to send order notification:', error);
     }

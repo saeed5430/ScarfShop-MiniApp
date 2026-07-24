@@ -1,7 +1,7 @@
 import type { D1Database } from '@cloudflare/workers-types';
 import { Database } from '../db';
 
-// Send message to Telegram user
+// Send message to Telegram user by chat_id
 async function sendTelegramMessage(
   botToken: string,
   chatId: string,
@@ -19,11 +19,37 @@ async function sendTelegramMessage(
       }),
     });
 
-    const data: { ok?: boolean } = await response.json();
+    const data: { ok?: boolean; description?: string } = await response.json();
+    if (!data.ok) {
+      console.error('Telegram sendMessage failed:', data.description);
+    }
     return data.ok === true;
   } catch (error) {
     console.error('Failed to send Telegram message:', error);
     return false;
+  }
+}
+
+// Get chat_id by username
+async function getChatIdByUsername(
+  botToken: string,
+  username: string
+): Promise<string | null> {
+  try {
+    const url = `https://api.telegram.org/bot${botToken}/getChat?chat_id=@${username}`;
+    const response = await fetch(url);
+    const data: { ok?: boolean; result?: { id?: number }; description?: string } = await response.json();
+
+    if (data.ok && data.result?.id) {
+      return String(data.result.id);
+    }
+
+    // If getChat fails, the user might not have started the bot
+    console.log(`getChat for @${username} failed:`, data.description);
+    return null;
+  } catch (error) {
+    console.error(`Failed to get chat_id for @${username}:`, error);
+    return null;
   }
 }
 
@@ -104,14 +130,14 @@ export async function sendOrderNotification(
     size_dimensions: string | null;
     quantity: number;
   }>
-): Promise<void> {
+): Promise<{ sent: number; failed: number }> {
   const database = new Database(db);
 
   // Get customer info
   const customer = await database.customers.findById(customerId);
   if (!customer) {
     console.error('Customer not found for notification:', customerId);
-    return;
+    return { sent: 0, failed: 0 };
   }
 
   // Get admin usernames
@@ -119,25 +145,31 @@ export async function sendOrderNotification(
 
   if (adminUsernames.length === 0) {
     console.log('No admins found to notify');
-    return;
+    return { sent: 0, failed: 0 };
   }
 
   // Format message
   const message = formatOrderMessage(orderId, customer, items);
 
+  let sent = 0;
+  let failed = 0;
+
   // Send to all admins
   for (const username of adminUsernames) {
-    try {
-      const url = `https://api.telegram.org/bot${botToken}/getChat?chat_id=@${username}`;
-      const response = await fetch(url);
-      const data: { ok?: boolean; result?: { id?: number } } = await response.json();
+    const chatId = await getChatIdByUsername(botToken, username);
 
-      if (data.ok && data.result && data.result.id) {
-        const chatId = String(data.result.id);
-        await sendTelegramMessage(botToken, chatId, message);
+    if (chatId) {
+      const success = await sendTelegramMessage(botToken, chatId, message);
+      if (success) {
+        sent++;
+      } else {
+        failed++;
       }
-    } catch (error) {
-      console.error(`Failed to send notification to admin ${username}:`, error);
+    } else {
+      console.log(`Could not send to @${username} - user may not have started the bot`);
+      failed++;
     }
   }
+
+  return { sent, failed };
 }
