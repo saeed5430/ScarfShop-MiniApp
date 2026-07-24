@@ -34,19 +34,20 @@ const fetchJson = async (url: string, options?: RequestInit) => {
   return response.json();
 };
 
-// Map resource name to API path and response key
+// Map resource name to admin API path and response key
 const resourceMap: Record<string, { path: string; key: string }> = {
-  categories: { path: "/api/categories", key: "categories" },
-  products: { path: "/api/products", key: "items" },
-  colors: { path: "/api/colors", key: "items" },
-  sizes: { path: "/api/sizes", key: "items" },
-  designs: { path: "/api/designs", key: "items" },
-  users: { path: "/api/users", key: "users" },
-  admins: { path: "/api/admins", key: "admins" },
-  orders: { path: "/api/orders", key: "orders" },
-  coupons: { path: "/api/coupons", key: "coupons" },
-  settings: { path: "/api/settings", key: "settings" },
-  chats: { path: "/api/chats", key: "messages" },
+  categories: { path: "/api/admin/categories", key: "categories" },
+  products: { path: "/api/admin/products", key: "items" },
+  colors: { path: "/api/admin/colors", key: "items" },
+  sizes: { path: "/api/admin/sizes", key: "items" },
+  designs: { path: "/api/admin/designs", key: "items" },
+  users: { path: "/api/admin/customers", key: "customers" },
+  customers: { path: "/api/admin/customers", key: "customers" },
+  admins: { path: "/api/admin/admins", key: "admins" },
+  orders: { path: "/api/admin/orders", key: "orders" },
+  coupons: { path: "/api/admin/coupons", key: "coupons" },
+  settings: { path: "/api/admin/settings", key: "settings" },
+  chats: { path: "/api/admin/chats", key: "messages" },
 };
 
 export const dataProvider: DataProvider = {
@@ -115,7 +116,9 @@ export const dataProvider: DataProvider = {
     const config = resourceMap[resource];
     if (!config) throw new Error(`Unknown resource: ${resource}`);
 
-    const data = await fetchJson(`${API_URL}${config.path}`, {
+    // For create/update/delete, use the main API routes with requireAdmin
+    const mainPath = config.path.replace("/api/admin", "/api");
+    const data = await fetchJson(`${API_URL}${mainPath}`, {
       method: "POST",
       body: JSON.stringify(variables),
     });
@@ -127,7 +130,8 @@ export const dataProvider: DataProvider = {
     const config = resourceMap[resource];
     if (!config) throw new Error(`Unknown resource: ${resource}`);
 
-    const data = await fetchJson(`${API_URL}${config.path}/${id}`, {
+    const mainPath = config.path.replace("/api/admin", "/api");
+    const data = await fetchJson(`${API_URL}${mainPath}/${id}`, {
       method: "PUT",
       body: JSON.stringify(variables),
     });
@@ -139,7 +143,8 @@ export const dataProvider: DataProvider = {
     const config = resourceMap[resource];
     if (!config) throw new Error(`Unknown resource: ${resource}`);
 
-    await fetchJson(`${API_URL}${config.path}/${id}`, { method: "DELETE" });
+    const mainPath = config.path.replace("/api/admin", "/api");
+    await fetchJson(`${API_URL}${mainPath}/${id}`, { method: "DELETE" });
 
     return { data: { id } as any };
   },

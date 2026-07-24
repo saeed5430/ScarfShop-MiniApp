@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { sign, verify } from 'hono/jwt';
 import { Database } from '../db';
 import { TOKEN_EXPIRY, getJwtSecret } from '../config';
+import { verifyPassword, needsRehash, hashPassword } from '../utils/password';
 
 type Bindings = {
   DB: D1Database;
@@ -25,50 +26,43 @@ adminAuthRoutes.post('/login', async (c) => {
   }
 
   const emailLower = email.toLowerCase().trim();
-  let adminData: { id: string; username: string; email: string; first_name: string; last_name: string | null } | null = null;
+  const database = new Database(db);
 
-  // Demo mode: accept admin@armana.ir / saeed54300 with password adminadmin
-  if (password === 'adminadmin' && (emailLower === 'admin@armana.ir' || emailLower === 'saeed54300')) {
-    adminData = {
-      id: 'admin_saeed54300',
-      username: 'saeed54300',
-      email: 'admin@armana.ir',
-      first_name: 'سعید',
-      last_name: null,
-    };
-  } else {
-    // Try database lookup
-    try {
-      const database = new Database(db);
-      let admin = await database.admins.findByEmail(emailLower);
-      if (!admin) {
-        admin = await database.admins.findByUsername(emailLower);
-      }
-
-      if (admin && password === 'adminadmin') {
-        adminData = {
-          id: admin.id,
-          username: admin.username,
-          email: admin.email ?? '',
-          first_name: admin.first_name,
-          last_name: admin.last_name,
-        };
-      }
-    } catch {
-      // Database might not be ready yet
-    }
+  // Find admin by email or username
+  let admin = await database.admins.findByEmail(emailLower);
+  if (!admin) {
+    admin = await database.admins.findByUsername(emailLower);
   }
 
-  if (!adminData) {
+  if (!admin) {
     return c.json({ error: 'ایمیل/یوزرنیم یا رمز عبور اشتباه است' }, 401);
+  }
+
+  // Verify password
+  if (!admin.password_hash) {
+    // Admin has no password set - this shouldn't happen in production
+    return c.json({ error: 'رمز عبور تنظیم نشده است' }, 401);
+  }
+
+  const isValidPassword = await verifyPassword(password, admin.password_hash);
+
+  if (!isValidPassword) {
+    return c.json({ error: 'ایمیل/یوزرنیم یا رمز عبور اشتباه است' }, 401);
+  }
+
+  // If password hash needs updating (e.g., was plain text), rehash it
+  if (needsRehash(admin.password_hash)) {
+    const newHash = await hashPassword(password);
+    await database.admins.update(admin.id, { password_hash: newHash });
   }
 
   // Generate JWT token with 30 min expiry
   const now = Math.floor(Date.now() / 1000);
   const payload = {
-    sub: adminData.id,
-    adminId: adminData.id,
-    email: adminData.email,
+    sub: admin.id,
+    adminId: admin.id,
+    username: admin.username,
+    email: admin.email,
     role: 'admin',
     type: 'admin',
     iat: now,
@@ -80,7 +74,13 @@ adminAuthRoutes.post('/login', async (c) => {
   return c.json({
     success: true,
     token,
-    admin: adminData,
+    admin: {
+      id: admin.id,
+      username: admin.username,
+      email: admin.email,
+      first_name: admin.first_name,
+      last_name: admin.last_name,
+    },
     expires_in: TOKEN_EXPIRY,
   });
 });
@@ -111,4 +111,59 @@ adminAuthRoutes.post('/verify', async (c) => {
 // Logout endpoint (client-side token removal)
 adminAuthRoutes.post('/logout', async (c) => {
   return c.json({ success: true, message: 'توکن حذف شد' });
+});
+
+// Change password endpoint (requires current JWT)
+adminAuthRoutes.post('/change-password', async (c) => {
+  const db = c.env.DB;
+  const JWT_SECRET = getJwtSecret(c.env);
+
+  if (!db) return c.json({ error: 'Database not configured' }, 500);
+
+  // Verify JWT
+  const authHeader = c.req.header('Authorization');
+  if (!authHeader?.startsWith('Bearer ')) {
+    return c.json({ error: 'توکن ارائه نشده' }, 401);
+  }
+
+  const token = authHeader.slice(7);
+  let payload;
+  try {
+    payload = await verify(token, JWT_SECRET, 'HS256');
+    if (payload.type !== 'admin' || payload.role !== 'admin') {
+      return c.json({ error: 'دسترسی غیرمجاز' }, 403);
+    }
+  } catch {
+    return c.json({ error: 'توکن منقضی یا نامعتبر' }, 401);
+  }
+
+  const body = await c.req.json<{ currentPassword: string; newPassword: string }>();
+  const { currentPassword, newPassword } = body;
+
+  if (!currentPassword || !newPassword) {
+    return c.json({ error: 'رمز عبور فعلی و جدید الزامی هستند' }, 400);
+  }
+
+  if (newPassword.length < 6) {
+    return c.json({ error: 'رمز عبور جدید باید حداقل ۶ کاراکتر باشد' }, 400);
+  }
+
+  const database = new Database(db);
+  const admin = await database.admins.getById(payload.adminId as string);
+
+  if (!admin || !admin.password_hash) {
+    return c.json({ error: 'ادمین یافت نشد' }, 404);
+  }
+
+  // Verify current password
+  const isValid = await verifyPassword(currentPassword, admin.password_hash);
+  if (!isValid) {
+    return c.json({ error: 'رمز عبور فعلی اشتباه است' }, 401);
+  }
+
+  // Hash new password
+  const newHash = await hashPassword(newPassword);
+  await database.admins.update(admin.id, { password_hash: newHash });
+
+  return c.json({ success: true, message: 'رمز عبور با موفقیت تغییر کرد' });
 });

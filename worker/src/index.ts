@@ -2,9 +2,11 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { apiRoutes } from './routes/api';
 import { adminAuthRoutes } from './routes/admin-auth';
+import { adminApiRoutes } from './routes/admin-api';
 import { authRoutes } from './routes/auth';
 import { uploadRoutes } from './routes/upload-image';
 import { telegramRoutes } from './routes/telegram';
+import { setupRoutes } from './routes/setup';
 import { runMigrations } from './db/migrate';
 import { requireAdmin } from './middleware/admin-auth';
 
@@ -43,15 +45,22 @@ app.use('/api/*', async (c, next) => {
   await next();
 });
 
-// Public auth routes
+// Public auth routes (Mini App + Admin Login)
 app.route('/api/admin-auth', adminAuthRoutes);
 app.route('/api/auth', authRoutes);
+
+// Setup routes (temporary - for initial admin setup)
+app.route('/api/setup', setupRoutes);
+
+// Admin-protected routes (JWT required for ALL operations)
+app.use('/api/admin/*', requireAdmin);
+app.route('/api/admin', adminApiRoutes);
 
 // Admin-protected upload routes
 app.use('/api/upload/*', requireAdmin);
 app.route('/api/upload', uploadRoutes);
 
-// Main API routes (individual routes have their own auth middleware)
+// Public routes (Mini App only - read-only)
 app.route('/api', apiRoutes);
 
 // Telegram webhook (no auth needed)
