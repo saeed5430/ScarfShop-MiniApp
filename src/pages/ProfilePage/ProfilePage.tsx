@@ -1,4 +1,5 @@
 import { type FC, useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Page } from '@/components/Page.tsx';
 import { useAuth } from '@/context/AuthContext.tsx';
 import { updateProfile } from '@/api/client';
@@ -22,6 +23,7 @@ declare global {
 }
 
 export const ProfilePage: FC = () => {
+  const navigate = useNavigate();
   const { customer, isAdmin } = useAuth();
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -47,8 +49,6 @@ export const ProfilePage: FC = () => {
     }
   }, [customer]);
 
-  const isProfileComplete = Boolean(customer?.phone && customer?.first_name);
-
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
@@ -56,7 +56,6 @@ export const ProfilePage: FC = () => {
   const handleRequestPhone = async () => {
     setPhoneLoading(true);
     try {
-      // Use Telegram's built-in contact request
       if (window.Telegram && window.Telegram.WebApp) {
         const tg = window.Telegram.WebApp as any;
         if (tg.requestContact) {
@@ -83,12 +82,18 @@ export const ProfilePage: FC = () => {
 
     try {
       await updateProfile({
+        first_name: formData.first_name,
+        last_name: formData.last_name,
         phone: formData.phone,
         address: formData.address,
         postal_code: formData.postal_code,
       });
       setSuccess(true);
-      setTimeout(() => setSuccess(false), 2000);
+
+      // Navigate to home after 1.5 seconds
+      setTimeout(() => {
+        navigate('/');
+      }, 1500);
     } catch (err) {
       console.error('Profile update failed:', err);
     } finally {
@@ -99,6 +104,30 @@ export const ProfilePage: FC = () => {
   return (
     <Page back={true}>
       <div className="profile-page">
+        {/* Success Overlay */}
+        {success && (
+          <div className="profile-success-overlay">
+            <div className="profile-success-card">
+              <div className="profile-success-icon">
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#22C55E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                  <polyline points="22 4 12 14.01 9 11.01" />
+                </svg>
+              </div>
+              <h3 className="profile-success-title">اطلاعات با موفقیت ذخیره شد!</h3>
+              <p className="profile-success-text">در حال انتقال به صفحه اصلی...</p>
+            </div>
+          </div>
+        )}
+
+        {/* Back Button */}
+        <button className="profile-back-btn" onClick={() => navigate('/')}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="15 18 9 12 15 6" />
+          </svg>
+          بازگشت
+        </button>
+
         <div className="profile-header">
           <div className="profile-avatar">
             {customer?.avatar_url ? (
@@ -114,16 +143,12 @@ export const ProfilePage: FC = () => {
           {isAdmin && <span className="profile-admin-badge">ادمین</span>}
         </div>
 
-        {!isProfileComplete && (
-          <div className="profile-incomplete-notice">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="12" cy="12" r="10" />
-              <line x1="12" y1="8" x2="12" y2="12" />
-              <line x1="12" y1="16" x2="12.01" y2="16" />
-            </svg>
-            <span>برای دسترسی به خرید سریع، اطلاعات پروفایل خود را تکمیل کنید</span>
+        <div className="profile-info-card">
+          <div className="profile-info-row">
+            <span className="profile-info-label">شناسه تلگرام</span>
+            <span className="profile-info-value">{customer?.id}</span>
           </div>
-        )}
+        </div>
 
         <form className="profile-form" onSubmit={handleSubmit}>
           {/* Name Fields */}
@@ -136,6 +161,7 @@ export const ProfilePage: FC = () => {
               placeholder="نام"
               value={formData.first_name}
               onChange={handleChange}
+              required
             />
           </div>
 
@@ -148,6 +174,7 @@ export const ProfilePage: FC = () => {
               placeholder="نام خانوادگی"
               value={formData.last_name}
               onChange={handleChange}
+              required
             />
           </div>
 
@@ -163,6 +190,7 @@ export const ProfilePage: FC = () => {
                 value={formData.phone}
                 onChange={handleChange}
                 dir="ltr"
+                required
               />
               <button
                 type="button"
@@ -170,7 +198,7 @@ export const ProfilePage: FC = () => {
                 onClick={handleRequestPhone}
                 disabled={phoneLoading}
               >
-                {phoneLoading ? '...' : 'دریافت از تلگرام'}
+                {phoneLoading ? '...' : 'دریافت شماره تلفن'}
               </button>
             </div>
           </div>
@@ -185,6 +213,7 @@ export const ProfilePage: FC = () => {
               value={formData.address}
               onChange={handleChange}
               rows={3}
+              required
             />
           </div>
 
@@ -199,6 +228,7 @@ export const ProfilePage: FC = () => {
               value={formData.postal_code}
               onChange={handleChange}
               dir="ltr"
+              required
             />
           </div>
 
@@ -207,7 +237,7 @@ export const ProfilePage: FC = () => {
             className="profile-submit"
             disabled={loading}
           >
-            {loading ? 'در حال ذخیره...' : success ? 'ذخیره شد ✓' : 'ذخیره اطلاعات'}
+            {loading ? 'در حال ذخیره...' : 'ذخیره اطلاعات'}
           </button>
         </form>
       </div>

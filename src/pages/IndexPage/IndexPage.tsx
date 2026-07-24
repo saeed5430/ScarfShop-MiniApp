@@ -10,7 +10,14 @@ export const IndexPage: FC = () => {
   const navigate = useNavigate();
   const { customer } = useAuth();
 
-  const isProfileComplete = Boolean(customer?.phone && customer?.first_name);
+  // Profile must have: phone, address, first_name, last_name, username
+  const isProfileComplete = Boolean(
+    customer?.phone &&
+    customer?.address &&
+    customer?.first_name &&
+    customer?.last_name &&
+    customer?.username
+  );
 
   return (
     <Page back={false}>
@@ -44,7 +51,7 @@ export const IndexPage: FC = () => {
               <div className="action-content">
                 <h3 className="action-title">پروفایل من</h3>
                 <p className="action-desc">
-                  {isProfileComplete ? 'مشاهده و ویرایش اطلاعات' : 'تکمیل اطلاعات برای خرید'}
+                  {isProfileComplete ? 'مشاهده و ویرایش اطلاعات' : 'تکمیل اطلاعات برای سفارش'}
                 </p>
               </div>
               {!isProfileComplete && <div className="action-badge">!</div>}
@@ -73,7 +80,7 @@ export const IndexPage: FC = () => {
               </svg>
             </div>
 
-            {/* Quick Buy Card */}
+            {/* Quick Order Card */}
             <div
               className={`action-card ${!isProfileComplete ? 'action-card-disabled' : ''}`}
               onClick={() => {
@@ -92,9 +99,9 @@ export const IndexPage: FC = () => {
                 </svg>
               </div>
               <div className="action-content">
-                <h3 className="action-title">خرید سریع</h3>
+                <h3 className="action-title">سفارش سریع</h3>
                 <p className="action-desc">
-                  {isProfileComplete ? 'مشاهده محصولات جدید' : 'ابتدا پروفایل خود را تکمیل کنید'}
+                  {isProfileComplete ? 'مشاهده محصولات و ثبت سفارش' : 'ابتدا پروفایل خود را تکمیل کنید'}
                 </p>
               </div>
               <svg className="action-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -102,7 +109,7 @@ export const IndexPage: FC = () => {
               </svg>
             </div>
 
-            {/* Admin Panel Card - Visible to all */}
+            {/* Admin Panel Card */}
             <div className="action-card" onClick={() => window.open('https://scarf-admin.pages.dev/login', '_blank')}>
               <div className="action-icon action-icon-admin">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
