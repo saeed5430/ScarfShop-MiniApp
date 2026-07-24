@@ -19,6 +19,7 @@ type Bindings = {
   IMAGEKIT_PUBLIC_KEY: string;
   IMAGEKIT_URL_ENDPOINT: string;
   JWT_SECRET: string;
+  ORDER_NOTIFY_BOT_TOKEN: string;
 };
 
 const app = new Hono<{ Bindings: Bindings }>();

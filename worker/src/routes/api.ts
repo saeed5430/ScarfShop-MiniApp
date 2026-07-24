@@ -7,6 +7,7 @@ import { requireCustomer } from '../middleware/customer-auth';
 type Bindings = {
   DB: D1Database;
   TELEGRAM_BOT_TOKEN: string;
+  ORDER_NOTIFY_BOT_TOKEN: string;
 };
 
 export const apiRoutes = new Hono<{ Bindings: Bindings }>();
@@ -752,6 +753,7 @@ apiRoutes.get('/orders/:id', async (c) => {
 
 apiRoutes.post('/orders', requireCustomer, async (c) => {
   const db = c.env.DB;
+  const orderNotifyBotToken = c.env.ORDER_NOTIFY_BOT_TOKEN;
   if (!db) return c.json({ error: 'Database not configured' }, 500);
 
   const authHeader = c.req.header('Authorization');
@@ -770,6 +772,16 @@ apiRoutes.post('/orders', requireCustomer, async (c) => {
 
   const order = await database.orders.create(orderData);
 
+  // Track items for notification
+  const orderItems: Array<{
+    product_name: string | null;
+    category_name: string | null;
+    color_name: string | null;
+    color_hex: string | null;
+    size_dimensions: string | null;
+    quantity: number;
+  }> = [];
+
   if (body.items && Array.isArray(body.items)) {
     for (const item of body.items) {
       await database.orderItems.create({
@@ -779,6 +791,31 @@ apiRoutes.post('/orders', requireCustomer, async (c) => {
         size_id: item.size_id,
         quantity: item.quantity,
       });
+
+      // Get product info for notification
+      const product = item.product_id ? await db.prepare('SELECT id, name, material, category_id FROM products WHERE id = ?').bind(item.product_id).first<Record<string, unknown>>() : null;
+      const color = item.color_id ? await db.prepare('SELECT id, name, hex FROM colors WHERE id = ?').bind(item.color_id).first<Record<string, unknown>>() : null;
+      const size = item.size_id ? await db.prepare('SELECT id, dimensions FROM sizes WHERE id = ?').bind(item.size_id).first<Record<string, unknown>>() : null;
+      const category = product?.category_id ? await db.prepare('SELECT id, name FROM categories WHERE id = ?').bind(Number(product.category_id)).first<Record<string, unknown>>() : null;
+
+      orderItems.push({
+        product_name: product?.name ? String(product.name) : null,
+        category_name: category?.name ? String(category.name) : null,
+        color_name: color?.name ? String(color.name) : null,
+        color_hex: color?.hex ? String(color.hex) : null,
+        size_dimensions: size?.dimensions ? String(size.dimensions) : null,
+        quantity: item.quantity,
+      });
+    }
+  }
+
+  // Send notification to admins
+  if (orderNotifyBotToken) {
+    try {
+      const { sendOrderNotification } = await import('../services/notify');
+      await sendOrderNotification(db, orderNotifyBotToken, order.id, customerId, orderItems);
+    } catch (error) {
+      console.error('Failed to send order notification:', error);
     }
   }
 
