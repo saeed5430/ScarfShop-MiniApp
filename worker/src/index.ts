@@ -16,6 +16,7 @@ type Bindings = {
   IMAGEKIT_PRIVATE_KEY: string;
   IMAGEKIT_PUBLIC_KEY: string;
   IMAGEKIT_URL_ENDPOINT: string;
+  JWT_SECRET: string;
 };
 
 const app = new Hono<{ Bindings: Bindings }>();

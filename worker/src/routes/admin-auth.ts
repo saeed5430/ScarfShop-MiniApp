@@ -1,10 +1,11 @@
 import { Hono } from 'hono';
 import { sign, verify } from 'hono/jwt';
 import { Database } from '../db';
-import { JWT_SECRET, TOKEN_EXPIRY } from '../config';
+import { TOKEN_EXPIRY, getJwtSecret } from '../config';
 
 type Bindings = {
   DB: D1Database;
+  JWT_SECRET: string;
 };
 
 export const adminAuthRoutes = new Hono<{ Bindings: Bindings }>();
@@ -12,6 +13,8 @@ export const adminAuthRoutes = new Hono<{ Bindings: Bindings }>();
 // Admin login - accepts email/username + password
 adminAuthRoutes.post('/login', async (c) => {
   const db = c.env.DB;
+  const JWT_SECRET = getJwtSecret(c.env);
+
   if (!db) return c.json({ error: 'Database not configured' }, 500);
 
   const body = await c.req.json<{ email: string; password: string }>();
@@ -64,10 +67,12 @@ adminAuthRoutes.post('/login', async (c) => {
   const now = Math.floor(Date.now() / 1000);
   const payload = {
     sub: adminData.id,
-    ...adminData,
+    adminId: adminData.id,
+    email: adminData.email,
+    role: 'admin',
+    type: 'admin',
     iat: now,
     exp: now + TOKEN_EXPIRY,
-    type: 'admin',
   };
 
   const token = await sign(payload, JWT_SECRET, 'HS256');
@@ -82,6 +87,7 @@ adminAuthRoutes.post('/login', async (c) => {
 
 // Verify admin token endpoint
 adminAuthRoutes.post('/verify', async (c) => {
+  const JWT_SECRET = getJwtSecret(c.env);
   const body = await c.req.json<{ token: string }>();
   const { token } = body;
 
@@ -92,7 +98,7 @@ adminAuthRoutes.post('/verify', async (c) => {
   try {
     const payload = await verify(token, JWT_SECRET, 'HS256');
 
-    if (payload.type !== 'admin') {
+    if (payload.type !== 'admin' || payload.role !== 'admin') {
       return c.json({ valid: false, error: 'توکن نامعتبر' }, 401);
     }
 
@@ -100,4 +106,9 @@ adminAuthRoutes.post('/verify', async (c) => {
   } catch {
     return c.json({ valid: false, error: 'توکن منقضی یا نامعتبر' }, 401);
   }
+});
+
+// Logout endpoint (client-side token removal)
+adminAuthRoutes.post('/logout', async (c) => {
+  return c.json({ success: true, message: 'توکن حذف شد' });
 });
