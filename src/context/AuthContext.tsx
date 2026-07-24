@@ -22,6 +22,21 @@ export function useAuth() {
   return useContext(AuthContext);
 }
 
+// Extract user ID from initData
+function extractUserId(initData: string): string | null {
+  try {
+    const params = new URLSearchParams(initData);
+    const userJson = params.get('user');
+    if (userJson) {
+      const user = JSON.parse(userJson);
+      return String(user.id);
+    }
+  } catch {
+    // ignore
+  }
+  return null;
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -33,39 +48,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (rawInitData) {
       doLogin(rawInitData);
-    } else {
-      setLoading(false);
     }
   }, [rawInitData]);
 
   async function doLogin(initData: string) {
     try {
-      // Check if we already have a valid session
+      // Get current Telegram user ID
+      const telegramUserId = extractUserId(initData);
+
+      // Check if we have a stored session for THIS user
+      const storedUserId = localStorage.getItem('telegram_user_id');
       const existingToken = localStorage.getItem('session_token');
 
-      if (existingToken) {
-        // Try to use existing session
-        try {
-          const res = await getCurrentCustomer();
-          if (res.customer) {
-            setCustomer(res.customer);
-            const adminCheck = await checkIsAdmin();
-            setIsAdmin(adminCheck.is_admin);
-            setLoading(false);
-            return;
-          }
-        } catch {
-          // Session invalid, need to login again
-          localStorage.removeItem('session_token');
-        }
+      // If session exists but belongs to different user, clear it
+      if (existingToken && storedUserId !== telegramUserId) {
+        localStorage.removeItem('session_token');
+        localStorage.removeItem('telegram_user_id');
       }
 
-      // No valid session - create new one
+      // Create new session with Telegram
       const result = await login(initData);
 
       if (result.success && result.session_token) {
         localStorage.setItem('session_token', result.session_token);
+        localStorage.setItem('telegram_user_id', telegramUserId || '');
 
+        // Fetch customer data with the new session
         const res = await getCurrentCustomer();
         setCustomer(res.customer);
 

@@ -200,42 +200,6 @@
   cursor: not-allowed;
 }
 
-/* Phone Row */
-.profile-phone-row {
-  display: flex;
-  gap: 8px;
-}
-
-.profile-input-phone {
-  flex: 1;
-}
-
-.profile-phone-btn {
-  height: 52px;
-  padding: 0 12px;
-  border: 1px solid var(--color-primary);
-  border-radius: 14px;
-  background-color: transparent;
-  color: var(--color-primary);
-  font-family: 'Vazirmatn', 'Estedad', sans-serif;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background-color 0.2s, color 0.2s;
-  flex-shrink: 0;
-}
-
-.profile-phone-btn:hover {
-  background-color: var(--color-primary);
-  color: white;
-}
-
-.profile-phone-btn:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-}
-
 /* Success Overlay */
 .profile-success-overlay {
   position: fixed;

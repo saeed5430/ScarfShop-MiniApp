@@ -6,27 +6,11 @@ import { updateProfile } from '@/api/client';
 
 import './ProfilePage.css';
 
-declare global {
-  interface Window {
-    Telegram?: {
-      WebApp?: {
-        requestContact?: () => Promise<boolean>;
-        initDataUnsafe?: {
-          contact?: {
-            phone_number?: string;
-          };
-        };
-      };
-    };
-  }
-}
-
 export const ProfilePage: FC = () => {
   const navigate = useNavigate();
   const { customer, isAdmin, refreshCustomer } = useAuth();
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
-  const [phoneLoading, setPhoneLoading] = useState(false);
 
   const [formData, setFormData] = useState({
     first_name: '',
@@ -50,32 +34,6 @@ export const ProfilePage: FC = () => {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  // Secure phone request via Telegram
-  const handleRequestPhone = async () => {
-    setPhoneLoading(true);
-    try {
-      const tg = window.Telegram?.WebApp;
-
-      if (tg?.requestContact) {
-        // Request contact permission from Telegram
-        const granted = await tg.requestContact();
-
-        if (granted) {
-          // Contact shared - get phone from initDataUnsafe
-          const phone = tg.initDataUnsafe?.contact?.phone_number;
-
-          if (phone) {
-            setFormData(prev => ({ ...prev, phone }));
-          }
-        }
-      }
-    } catch (err) {
-      console.error('Failed to request contact:', err);
-    } finally {
-      setPhoneLoading(false);
-    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -194,27 +152,16 @@ export const ProfilePage: FC = () => {
             <label className="profile-label">
               شماره تلفن <span className="profile-required">*</span>
             </label>
-            <div className="profile-phone-row">
-              <input
-                type="tel"
-                name="phone"
-                className="profile-input profile-input-phone"
-                placeholder="شماره تلفن"
-                value={formData.phone}
-                onChange={handleChange}
-                dir="ltr"
-                required
-                readOnly
-              />
-              <button
-                type="button"
-                className="profile-phone-btn"
-                onClick={handleRequestPhone}
-                disabled={phoneLoading}
-              >
-                {phoneLoading ? '...' : 'دریافت شماره تلفن'}
-              </button>
-            </div>
+            <input
+              type="tel"
+              name="phone"
+              className="profile-input"
+              placeholder="09121234567"
+              value={formData.phone}
+              onChange={handleChange}
+              dir="ltr"
+              required
+            />
           </div>
 
           {/* Optional Fields */}
