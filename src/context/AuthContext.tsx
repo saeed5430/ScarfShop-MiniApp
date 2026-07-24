@@ -31,10 +31,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const rawInitData = useRawInitData();
 
   useEffect(() => {
-    // Clear any old session
-    localStorage.removeItem('session_token');
-    localStorage.removeItem('demo_customer');
-
     if (rawInitData) {
       doLogin(rawInitData);
     } else {
@@ -44,8 +40,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function doLogin(initData: string) {
     try {
-      localStorage.removeItem('session_token');
+      // Check if we already have a valid session
+      const existingToken = localStorage.getItem('session_token');
 
+      if (existingToken) {
+        // Try to use existing session
+        try {
+          const res = await getCurrentCustomer();
+          if (res.customer) {
+            setCustomer(res.customer);
+            const adminCheck = await checkIsAdmin();
+            setIsAdmin(adminCheck.is_admin);
+            setLoading(false);
+            return;
+          }
+        } catch {
+          // Session invalid, need to login again
+          localStorage.removeItem('session_token');
+        }
+      }
+
+      // No valid session - create new one
       const result = await login(initData);
 
       if (result.success && result.session_token) {

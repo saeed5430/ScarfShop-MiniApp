@@ -11,8 +11,10 @@ declare global {
     Telegram?: {
       WebApp?: {
         requestContact?: () => Promise<boolean>;
-        contact?: {
-          phone_number?: string;
+        initDataUnsafe?: {
+          contact?: {
+            phone_number?: string;
+          };
         };
       };
     };
@@ -55,19 +57,19 @@ export const ProfilePage: FC = () => {
     setPhoneLoading(true);
     try {
       const tg = window.Telegram?.WebApp;
+
       if (tg?.requestContact) {
         // Request contact permission from Telegram
         const granted = await tg.requestContact();
 
-        if (granted && tg.contact?.phone_number) {
-          // Phone is verified by Telegram - secure
-          setFormData(prev => ({ ...prev, phone: tg.contact!.phone_number! }));
-        } else {
-          // User denied or error
-          console.log('Contact request denied or failed');
+        if (granted) {
+          // Contact shared - get phone from initDataUnsafe
+          const phone = tg.initDataUnsafe?.contact?.phone_number;
+
+          if (phone) {
+            setFormData(prev => ({ ...prev, phone }));
+          }
         }
-      } else {
-        console.log('Telegram WebApp not available');
       }
     } catch (err) {
       console.error('Failed to request contact:', err);
