@@ -2,7 +2,12 @@ import React, { useState, useRef, useCallback } from "react";
 import { Button, message, Spin, Image } from "antd";
 import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 
-const API_URL = "http://localhost:8787";
+const API_URL = "https://scarf-mini-app.abdollahi003.workers.dev";
+
+const getAuthHeaders = (): Record<string, string> => {
+  const token = localStorage.getItem("admin_token");
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
 
 interface ImageUploaderProps {
   value?: string;
@@ -47,6 +52,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
 
       const response = await fetch(`${API_URL}/api/upload/image`, {
         method: "POST",
+        headers: getAuthHeaders(),
         body: formData,
       });
 

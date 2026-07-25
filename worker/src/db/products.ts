@@ -55,8 +55,11 @@ export class ProductsDB {
     return row ? this.parseRow(row) : null;
   }
 
-  async list(): Promise<Product[]> {
-    const { results } = await this.db.prepare('SELECT * FROM products ORDER BY created_at DESC').all();
+  async list(activeOnly: boolean = false): Promise<Product[]> {
+    const query = activeOnly
+      ? 'SELECT * FROM products WHERE is_active = 1 ORDER BY created_at DESC'
+      : 'SELECT * FROM products ORDER BY created_at DESC';
+    const { results } = await this.db.prepare(query).all();
     return results.map((r) => this.parseRow(r));
   }
 
@@ -74,7 +77,7 @@ export class ProductsDB {
 
   async search(query: string): Promise<Product[]> {
     const { results } = await this.db.prepare(
-      "SELECT * FROM products WHERE (name LIKE ? OR description LIKE ? OR short_description LIKE ? OR slug LIKE ? OR sku LIKE ?) ORDER BY created_at DESC"
+      "SELECT * FROM products WHERE is_active = 1 AND (name LIKE ? OR description LIKE ? OR short_description LIKE ? OR slug LIKE ? OR sku LIKE ?) ORDER BY created_at DESC"
     ).bind(`%${query}%`, `%${query}%`, `%${query}%`, `%${query}%`, `%${query}%`).all();
     return results.map((r) => this.parseRow(r));
   }
@@ -106,7 +109,12 @@ export class ProductsDB {
   }
 
   async delete(id: number): Promise<boolean> {
-    const result = await this.db.prepare('DELETE FROM products WHERE id = ?').bind(id).run();
+    const result = await this.db.prepare('UPDATE products SET is_active = 0, updated_at = ? WHERE id = ?').bind(nowJalali(), id).run();
+    return (result.meta.changes ?? 0) > 0;
+  }
+
+  async restore(id: number): Promise<boolean> {
+    const result = await this.db.prepare('UPDATE products SET is_active = 1, updated_at = ? WHERE id = ?').bind(nowJalali(), id).run();
     return (result.meta.changes ?? 0) > 0;
   }
 

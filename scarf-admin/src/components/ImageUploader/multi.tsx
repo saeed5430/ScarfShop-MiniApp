@@ -2,7 +2,12 @@ import React, { useState, useRef, useCallback } from "react";
 import { Button, message, Spin, Image } from "antd";
 import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 
-const API_URL = "http://localhost:8787";
+const API_URL = "https://scarf-mini-app.abdollahi003.workers.dev";
+
+const getAuthHeaders = (): Record<string, string> => {
+  const token = localStorage.getItem("admin_token");
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
 
 export interface ImageData {
   url: string;
@@ -60,6 +65,7 @@ export const MultiImageUploader: React.FC<MultiImageUploaderProps> = ({
 
       const response = await fetch(`${API_URL}/api/upload/image`, {
         method: "POST",
+        headers: getAuthHeaders(),
         body: formData,
       });
 
@@ -100,6 +106,7 @@ export const MultiImageUploader: React.FC<MultiImageUploaderProps> = ({
       // Delete from ImageKit
       const response = await fetch(`${API_URL}/api/upload/image/${image.fileId}`, {
         method: "DELETE",
+        headers: getAuthHeaders(),
       });
 
       const result = await response.json();

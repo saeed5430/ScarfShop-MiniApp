@@ -229,7 +229,7 @@ apiRoutes.get('/products', async (c) => {
   } else if (categoryId) {
     items = await database.products.listByCategory(Number(categoryId));
   } else {
-    items = await database.products.list();
+    items = await database.products.list(true);
   }
 
   // Filter by is_active
@@ -257,7 +257,7 @@ apiRoutes.get('/products/:id', async (c) => {
 
   const database = new Database(db);
   const product = await database.products.getById(Number(c.req.param('id')));
-  if (!product) return c.json({ error: 'Not found' }, 404);
+  if (!product || !product.is_active) return c.json({ error: 'Not found' }, 404);
 
   const colorIds = await database.products.getColors(product.id);
   const sizeIds = await database.products.getSizes(product.id);
@@ -335,10 +335,22 @@ apiRoutes.delete('/products/:id', requireAdmin, async (c) => {
   if (!db) return c.json({ error: 'Database not configured' }, 500);
 
   const id = Number(c.req.param('id'));
-  const database = new Database(db);
-  const deleted = await database.products.delete(id);
+  if (!id) return c.json({ error: 'Invalid product ID' }, 400);
 
-  return c.json({ deleted });
+  try {
+    const database = new Database(db);
+    const product = await database.products.getById(id);
+    if (!product) return c.json({ error: 'محصول یافت نشد' }, 404);
+
+    const deleted = await database.products.delete(id);
+    if (!deleted) return c.json({ error: 'حذف محصول انجام نشد' }, 500);
+
+    return c.json({ deleted: true, message: 'محصول با موفقیت حذف شد' });
+  } catch (error) {
+    console.error('Error deleting product:', error);
+    const message = error instanceof Error ? error.message : 'خطا در حذف محصول';
+    return c.json({ error: message }, 500);
+  }
 });
 
 // Product Colors routes

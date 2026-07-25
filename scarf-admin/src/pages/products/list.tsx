@@ -1,24 +1,62 @@
-import React from "react";
+import React, { useState } from "react";
 import { useTable } from "@refinedev/antd";
-import { useDelete } from "@refinedev/core";
+import { useDelete, useUpdate } from "@refinedev/core";
 import { CreateButton, List } from "@refinedev/antd";
 import { useNavigate } from "react-router-dom";
 import { ResponsiveTable } from "../../components/ResponsiveTable";
-import { message, Tag, Typography, Image } from "antd";
+import { ConfirmDeleteModal } from "../../components/ConfirmDeleteModal";
+import { message, Tag, Typography, Image, Button, Switch, Card } from "antd";
+import { DeleteOutlined, UndoOutlined } from "@ant-design/icons";
 
 const { Text } = Typography;
 
 export const ProductList: React.FC = () => {
   const { tableProps } = useTable();
   const { mutate: remove } = useDelete();
+  const { mutate: update } = useUpdate();
   const navigate = useNavigate();
+  const [deleteTarget, setDeleteTarget] = useState<any>(null);
+  const [deleting, setDeleting] = useState(false);
 
-  const handleDelete = (record: any) => {
+  const allProducts = (tableProps.dataSource || []) as any[];
+  const activeProducts = allProducts.filter((p) => p.is_active);
+  const deletedProducts = allProducts.filter((p) => !p.is_active);
+
+  const handleDelete = () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
     remove(
-      { resource: "products", id: record.id },
+      { resource: "products", id: deleteTarget.id },
       {
-        onSuccess: () => message.success("محصول با موفقیت حذف شد"),
-        onError: () => message.error("خطا در حذف محصول"),
+        onSuccess: () => {
+          message.success("محصول با موفقیت حذف شد");
+          setDeleteTarget(null);
+          setDeleting(false);
+        },
+        onError: () => {
+          message.error("خطا در حذف محصول");
+          setDeleting(false);
+        },
+      }
+    );
+  };
+
+  const handleToggleActive = (record: any, checked: boolean) => {
+    update(
+      { resource: "products", id: record.id, values: { is_active: checked ? 1 : 0 } },
+      {
+        onSuccess: () => message.success(checked ? "محصول فعال شد" : "محصول غیرفعال شد"),
+        onError: () => message.error("خطا در تغییر وضعیت"),
+      }
+    );
+  };
+
+  const handleRestore = (record: any) => {
+    update(
+      { resource: "products", id: record.id, values: { is_active: 1 } },
+      {
+        onSuccess: () => message.success("محصول با موفقیت بازگردانده شد"),
+        onError: () => message.error("خطا در بازگردانی محصول"),
       }
     );
   };
@@ -95,10 +133,14 @@ export const ProductList: React.FC = () => {
       title: "وضعیت",
       dataIndex: "is_active",
       width: 100,
-      render: (is_active: boolean) => (
-        <Tag color={is_active ? "green" : "red"}>
-          {is_active ? "فعال" : "غیرفعال"}
-        </Tag>
+      render: (is_active: boolean, record: any) => (
+        <Switch
+          checked={is_active}
+          checkedChildren="فعال"
+          unCheckedChildren="غیرفعال"
+          onChange={(checked) => handleToggleActive(record, checked)}
+          size="small"
+        />
       ),
     },
   ];
@@ -107,19 +149,65 @@ export const ProductList: React.FC = () => {
   const mobileCardSubtitle = (record: any) => record.category_name || "-";
 
   return (
-    <List headerProps={{ title: "محصولات", extra: <CreateButton /> }}>
-      <ResponsiveTable
-        dataSource={tableProps.dataSource || []}
-        loading={!!tableProps.loading}
-        rowKey="id"
-        mobileCardTitle={mobileCardTitle}
-        mobileCardSubtitle={mobileCardSubtitle}
-        columns={columns}
-        actions={{
-          onEdit: (record) => navigate(`/products/edit/${record.id}`),
-          onDelete: (record) => handleDelete(record),
-        }}
+    <div>
+      <List headerProps={{ title: "محصولات", extra: <CreateButton /> }}>
+        <ResponsiveTable
+          dataSource={activeProducts}
+          loading={!!tableProps.loading}
+          rowKey="id"
+          mobileCardTitle={mobileCardTitle}
+          mobileCardSubtitle={mobileCardSubtitle}
+          columns={columns}
+          actions={{
+            onEdit: (record) => navigate(`/products/edit/${record.id}`),
+            onDelete: (record) => setDeleteTarget(record),
+          }}
+        />
+      </List>
+
+      {deletedProducts.length > 0 && (
+        <Card
+          title={
+            <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <DeleteOutlined style={{ color: "#999" }} />
+              سطل زباله ({deletedProducts.length} محصول)
+            </span>
+          }
+          style={{ marginTop: 16, border: "1px solid #f0f0f0" }}
+          size="small"
+        >
+          <ResponsiveTable
+            dataSource={deletedProducts}
+            loading={!!tableProps.loading}
+            rowKey="id"
+            mobileCardTitle={mobileCardTitle}
+            mobileCardSubtitle={mobileCardSubtitle}
+            columns={columns.filter((c) => c.key !== "is_active")}
+            emptyText="سطل زباله خالی است"
+            actions={{
+              extra: (record) => (
+                <Button
+                  type="link"
+                  icon={<UndoOutlined />}
+                  size="small"
+                  style={{ color: "#52c41a" }}
+                  onClick={() => handleRestore(record)}
+                >
+                  بازگردانی
+                </Button>
+              ),
+            }}
+          />
+        </Card>
+      )}
+
+      <ConfirmDeleteModal
+        open={!!deleteTarget}
+        title={`آیا از حذف محصول «${deleteTarget?.name || ""}» مطمئن هستید؟`}
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteTarget(null)}
+        loading={deleting}
       />
-    </List>
+    </div>
   );
 };

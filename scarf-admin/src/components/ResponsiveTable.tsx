@@ -18,6 +18,7 @@ interface ActionConfig<T> {
   onEdit?: (record: T) => void;
   onDelete?: (record: T) => void;
   onView?: (record: T) => void;
+  extra?: (record: T) => React.ReactNode;
   editLabel?: string;
   deleteLabel?: string;
   viewLabel?: string;
@@ -160,6 +161,7 @@ export function ResponsiveTable<T extends Record<string, any>>({
                     {actions.deleteLabel || "حذف"}
                   </Button>
                 )}
+                {actions.extra && actions.extra(record)}
               </div>
             )}
           </Card>
@@ -222,6 +224,7 @@ export function ResponsiveTable<T extends Record<string, any>>({
                   onClick={() => actions.onDelete?.(record)}
                 />
               )}
+              {actions.extra && actions.extra(record)}
             </Space>
           )}
         />

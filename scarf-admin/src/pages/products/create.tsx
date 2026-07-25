@@ -4,6 +4,13 @@ import { useState } from "react";
 import { PlusOutlined } from "@ant-design/icons";
 import { MultiImageUploader, type ImageData } from "../../components/ImageUploader/multi";
 
+const API_URL = "https://scarf-mini-app.abdollahi003.workers.dev";
+
+const getAuthHeaders = (): Record<string, string> => {
+  const token = localStorage.getItem("admin_token");
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
+
 const persianToSlug = (text: string): string => {
   const persianMap: Record<string, string> = {
     "ا": "a", "ب": "b", "پ": "p", "ت": "t", "ث": "s", "ج": "j",
@@ -54,9 +61,9 @@ export const ProductCreate: React.FC = () => {
     }
     setCreatingColor(true);
     try {
-      const response = await fetch("http://localhost:8787/api/colors", {
+      const response = await fetch(`${API_URL}/api/colors`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify(newColor),
       });
       if (response.ok) {
@@ -81,9 +88,9 @@ export const ProductCreate: React.FC = () => {
     }
     setCreatingSize(true);
     try {
-      const response = await fetch("http://localhost:8787/api/sizes", {
+      const response = await fetch(`${API_URL}/api/sizes`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify(newSize),
       });
       if (response.ok) {

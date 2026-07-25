@@ -1,9 +1,10 @@
-import React from "react";
+import React, { useState } from "react";
 import { useTable } from "@refinedev/antd";
 import { useDelete } from "@refinedev/core";
 import { CreateButton, List } from "@refinedev/antd";
 import { useNavigate } from "react-router-dom";
 import { ResponsiveTable } from "../../components/ResponsiveTable";
+import { ConfirmDeleteModal } from "../../components/ConfirmDeleteModal";
 import { PersianDate } from "../../components/PersianDate";
 import { message, Tag, Typography } from "antd";
 
@@ -13,17 +14,29 @@ export const SizeList: React.FC = () => {
   const { tableProps } = useTable();
   const { mutate: remove } = useDelete();
   const navigate = useNavigate();
+  const [deleteTarget, setDeleteTarget] = useState<any>(null);
+  const [deleting, setDeleting] = useState(false);
 
-  const handleDelete = (record: any) => {
-    if (record.product_count > 0) {
+  const handleDelete = () => {
+    if (!deleteTarget) return;
+    if (deleteTarget.product_count > 0) {
       message.warning("این سایز در محصولات استفاده شده و قابل حذف نیست");
+      setDeleteTarget(null);
       return;
     }
+    setDeleting(true);
     remove(
-      { resource: "sizes", id: record.id },
+      { resource: "sizes", id: deleteTarget.id },
       {
-        onSuccess: () => message.success("سایز با موفقیت حذف شد"),
-        onError: () => message.error("خطا در حذف سایز"),
+        onSuccess: () => {
+          message.success("سایز با موفقیت حذف شد");
+          setDeleteTarget(null);
+          setDeleting(false);
+        },
+        onError: () => {
+          message.error("خطا در حذف سایز");
+          setDeleting(false);
+        },
       }
     );
   };
@@ -67,6 +80,7 @@ export const SizeList: React.FC = () => {
   const mobileCardSubtitle = (record: any) => `محصول: ${record.product_count}`;
 
   return (
+    <div>
     <List headerProps={{ title: "سایزها", extra: <CreateButton /> }}>
       <ResponsiveTable
         dataSource={tableProps.dataSource || []}
@@ -77,9 +91,18 @@ export const SizeList: React.FC = () => {
         columns={columns}
         actions={{
           onEdit: (record) => navigate(`/sizes/edit/${record.id}`),
-          onDelete: (record) => handleDelete(record),
+          onDelete: (record) => setDeleteTarget(record),
         }}
       />
     </List>
+
+    <ConfirmDeleteModal
+      open={!!deleteTarget}
+      title={`آیا از حذف سایز «${deleteTarget?.dimensions || ""}» مطمئن هستید؟`}
+      onConfirm={handleDelete}
+      onCancel={() => setDeleteTarget(null)}
+      loading={deleting}
+    />
+    </div>
   );
 };

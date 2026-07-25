@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Card, Form, Input, Button, message, Spin } from "antd";
 import { SaveOutlined } from "@ant-design/icons";
 
-const API_URL = "http://localhost:8787";
+const API_URL = "https://scarf-mini-app.abdollahi003.workers.dev";
 
 export const SettingsPage: React.FC = () => {
   const [form] = Form.useForm();
@@ -13,9 +13,19 @@ export const SettingsPage: React.FC = () => {
     fetchSettings();
   }, []);
 
+  const getHeaders = () => {
+    const token = localStorage.getItem("admin_token");
+    return {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
+  };
+
   const fetchSettings = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/settings`);
+      const response = await fetch(`${API_URL}/api/settings`, {
+        headers: getHeaders(),
+      });
       const data = await response.json();
 
       const formValues: Record<string, string> = {};
@@ -41,7 +51,7 @@ export const SettingsPage: React.FC = () => {
 
       const response = await fetch(`${API_URL}/api/settings/bulk`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: getHeaders(),
         body: JSON.stringify({ items }),
       });
 
