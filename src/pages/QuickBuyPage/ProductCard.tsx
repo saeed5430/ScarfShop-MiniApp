@@ -56,7 +56,7 @@ export const ProductCard: FC<ProductCardProps> = ({
     });
   }, [colors, product.id, selectedSize, selectedItems]);
 
-  const rows = useMemo(() => {
+  const chunks = useMemo(() => {
     const result: typeof colorCells[] = [];
     for (let i = 0; i < colorCells.length; i += 7) {
       result.push(colorCells.slice(i, i + 7));
@@ -88,46 +88,86 @@ export const ProductCard: FC<ProductCardProps> = ({
       </div>
 
       <div className="product-card-color-section">
-        {rows.map((row, rowIndex) => (
-          <div key={rowIndex} className="product-card-color-row">
-            {row.map((cell) => (
-              <div key={cell.color.id} className="product-card-color-cell">
-                <button
-                  className={`product-card-color-btn ${cell.isSelected ? 'product-card-color-btn--selected' : ''}`}
-                  onClick={() => handleColorSelect(cell.color.id, selectedSize!.id)}
-                >
-                  <div
-                    className="product-card-color-dot"
-                    style={{ backgroundColor: cell.color.hex }}
-                  />
-                </button>
-                <span className="product-card-color-name">{cell.color.name}</span>
-                {cell.isSelected && (
-                  <div className="product-card-qty-controls">
-                    <button
-                      className="product-card-qty-btn"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleQuantityChange(cell.key, -1);
-                      }}
-                      disabled={cell.qty <= 1}
-                    >
-                      −
-                    </button>
-                    <span className="product-card-qty-value">{cell.qty}</span>
-                    <button
-                      className="product-card-qty-btn"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleQuantityChange(cell.key, 1);
-                      }}
-                    >
-                      +
-                    </button>
-                  </div>
-                )}
-              </div>
-            ))}
+        {chunks.map((chunk, chunkIndex) => (
+          <div key={chunkIndex} className="product-card-color-table-wrap">
+            <table className="product-card-color-table" cellSpacing="0" cellPadding="0">
+              <thead>
+                <tr className="product-card-color-row-colors">
+                  {chunk.map((cell) => (
+                    <th key={cell.color.id} className="product-card-color-cell" scope="col">
+                      <button
+                        className={`product-card-color-btn ${cell.isSelected ? 'product-card-color-btn--selected' : ''}`}
+                        onClick={() => handleColorSelect(cell.color.id, selectedSize!.id)}
+                        type="button"
+                        aria-label={cell.color.name}
+                      >
+                        <div
+                          className="product-card-color-dot"
+                          style={{ backgroundColor: cell.color.hex }}
+                        />
+                      </button>
+                      <span className="product-card-color-name">{cell.color.name}</span>
+                    </th>
+                  ))}
+                  {chunk.length < 7 && Array.from({ length: 7 - chunk.length }).map((_, i) => (
+                    <th key={`empty-${i}`} className="product-card-color-cell product-card-color-cell--empty" />
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="product-card-qty-row">
+                  {chunk.map((cell) => (
+                    <td key={cell.color.id} className="product-card-qty-cell">
+                      <span className="product-card-qty-value">{cell.qty}</span>
+                    </td>
+                  ))}
+                  {chunk.length < 7 && Array.from({ length: 7 - chunk.length }).map((_, i) => (
+                    <td key={`empty-qty-${i}`} className="product-card-qty-cell product-card-qty-cell--empty" />
+                  ))}
+                </tr>
+                <tr className="product-card-action-row">
+                  {chunk.map((cell) => (
+                    <td key={cell.color.id} className="product-card-action-cell">
+                      <button
+                        className="product-card-qty-btn product-card-qty-btn--plus"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleQuantityChange(cell.key, 1);
+                        }}
+                        type="button"
+                        aria-label={`افزایش ${cell.color.name}`}
+                      >
+                        +
+                      </button>
+                    </td>
+                  ))}
+                  {chunk.length < 7 && Array.from({ length: 7 - chunk.length }).map((_, i) => (
+                    <td key={`empty-plus-${i}`} className="product-card-action-cell product-card-action-cell--empty" />
+                  ))}
+                </tr>
+                <tr className="product-card-action-row">
+                  {chunk.map((cell) => (
+                    <td key={cell.color.id} className="product-card-action-cell">
+                      <button
+                        className="product-card-qty-btn product-card-qty-btn--minus"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleQuantityChange(cell.key, -1);
+                        }}
+                        type="button"
+                        disabled={cell.qty <= 0}
+                        aria-label={`کاهش ${cell.color.name}`}
+                      >
+                        −
+                      </button>
+                    </td>
+                  ))}
+                  {chunk.length < 7 && Array.from({ length: 7 - chunk.length }).map((_, i) => (
+                    <td key={`empty-minus-${i}`} className="product-card-action-cell product-card-action-cell--empty" />
+                  ))}
+                </tr>
+              </tbody>
+            </table>
           </div>
         ))}
       </div>
