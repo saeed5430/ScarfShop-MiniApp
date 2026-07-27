@@ -1,6 +1,6 @@
 import { type FC, useMemo, useCallback } from 'react';
 import type { ProductWithRelations, SelectedItem } from './QuickBuyPage.tsx';
-import type { Color, Size } from '@/api/client.ts';
+import type { Size } from '@/api/client.ts';
 
 import './ProductCard.css';
 
@@ -39,30 +39,45 @@ export const ProductCard: FC<ProductCardProps> = ({
 
   const displayName = [category?.name, product.name].filter(Boolean).join(' ');
 
-  const selectedItemsForCard = useMemo(() => {
-    const items: Array<{ key: string; item: SelectedItem; color: Color | undefined; size: Size | undefined }> = [];
-    if (!selectedSize) return items;
+  const colorCells = useMemo(() => {
+    if (!selectedSize) return [];
+    return colors.map((color) => {
+      const key = `${product.id}-${color.id}-${selectedSize.id}`;
+      const item = selectedItems.get(key);
+      const isSelected = item !== undefined && item.quantity > 0;
+      const qty = item?.quantity ?? 0;
 
-    selectedItems.forEach((item, key) => {
-      if (key.startsWith(`${product.id}-`) && item.sizeId === selectedSize.id) {
-        items.push({
-          key,
-          item,
-          color: colors.find((c) => c.id === item.colorId),
-          size: selectedSize,
-        });
-      }
+      return {
+        key,
+        color,
+        isSelected,
+        qty,
+      };
     });
-    return items;
-  }, [selectedItems, product.id, colors, selectedSize]);
+  }, [colors, product.id, selectedSize, selectedItems]);
+
+  const rows = useMemo(() => {
+    const result: typeof colorCells[] = [];
+    for (let i = 0; i < colorCells.length; i += 7) {
+      result.push(colorCells.slice(i, i + 7));
+    }
+    return result;
+  }, [colorCells]);
 
   return (
-    <div className="product-card-v">
-      <div className="product-card-v-image-wrap">
+    <div className="product-card">
+      <div className="product-card-header">
+        <h3 className="product-card-name">{displayName}</h3>
+        {selectedSize && (
+          <span className="product-card-size-badge">{selectedSize.dimensions}</span>
+        )}
+      </div>
+
+      <div className="product-card-image-wrap">
         {firstImage ? (
-          <img src={firstImage} alt={displayName} className="product-card-v-image" />
+          <img src={firstImage} alt={displayName} className="product-card-image" />
         ) : (
-          <div className="product-card-v-image-placeholder">
+          <div className="product-card-image-placeholder">
             <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
               <rect x="3" y="3" width="18" height="18" rx="2" />
               <circle cx="8.5" cy="8.5" r="1.5" />
@@ -72,83 +87,49 @@ export const ProductCard: FC<ProductCardProps> = ({
         )}
       </div>
 
-      <div className="product-card-v-info">
-        <div className="product-card-v-header">
-          <h3 className="product-card-v-name">{displayName}</h3>
-          <div className="product-card-v-meta">
-            {product.material && (
-              <span className="product-card-v-material">{product.material}</span>
-            )}
-            {selectedSize && (
-              <span className="product-card-v-size-badge">{selectedSize.dimensions}</span>
-            )}
-          </div>
-        </div>
-
-        {product.short_description && (
-          <p className="product-card-v-desc">{product.short_description}</p>
-        )}
-
-        <div className="product-card-v-color-grid">
-          {colors.map((color) => {
-            const key = selectedSize
-              ? `${product.id}-${color.id}-${selectedSize.id}`
-              : `${product.id}-${color.id}-0`;
-            const item = selectedItems.get(key);
-            const isSelected = item !== undefined && item.quantity > 0;
-
-            return (
-              <div key={color.id} className="product-card-v-color-item">
+      <div className="product-card-color-section">
+        {rows.map((row, rowIndex) => (
+          <div key={rowIndex} className="product-card-color-row">
+            {row.map((cell) => (
+              <div key={cell.color.id} className="product-card-color-cell">
                 <button
-                  className={`product-card-v-color-btn ${isSelected ? 'product-card-v-color-btn--selected' : ''}`}
-                  onClick={() => selectedSize && handleColorSelect(color.id, selectedSize.id)}
+                  className={`product-card-color-btn ${cell.isSelected ? 'product-card-color-btn--selected' : ''}`}
+                  onClick={() => handleColorSelect(cell.color.id, selectedSize!.id)}
                 >
                   <div
-                    className="product-card-v-color-dot"
-                    style={{ backgroundColor: color.hex }}
+                    className="product-card-color-dot"
+                    style={{ backgroundColor: cell.color.hex }}
                   />
                 </button>
-                <span className="product-card-v-color-name">{color.name}</span>
-              </div>
-            );
-          })}
-        </div>
-
-        {selectedItemsForCard.length > 0 && (
-          <div className="product-card-v-selected-summary">
-            {selectedItemsForCard.map(({ key, item, color, size }) => {
-              if (!color || !size) return null;
-              return (
-                <div key={key} className="product-card-v-selected-item">
-                  <div className="product-card-v-selected-left">
-                    <div
-                      className="product-card-v-selected-dot"
-                      style={{ backgroundColor: color.hex }}
-                    />
-                    <span className="product-card-v-selected-text">
-                      {color.name} — {size.dimensions}
-                    </span>
-                  </div>
-                  <div className="product-card-v-selected-controls">
+                <span className="product-card-color-name">{cell.color.name}</span>
+                {cell.isSelected && (
+                  <div className="product-card-qty-controls">
                     <button
-                      className="product-card-v-qty-btn"
-                      onClick={() => handleQuantityChange(key, -1)}
+                      className="product-card-qty-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleQuantityChange(cell.key, -1);
+                      }}
+                      disabled={cell.qty <= 1}
                     >
                       −
                     </button>
-                    <span className="product-card-v-qty-value">{item.quantity}</span>
+                    <span className="product-card-qty-value">{cell.qty}</span>
                     <button
-                      className="product-card-v-qty-btn"
-                      onClick={() => handleQuantityChange(key, 1)}
+                      className="product-card-qty-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleQuantityChange(cell.key, 1);
+                      }}
                     >
                       +
                     </button>
                   </div>
-                </div>
-              );
-            })}
+                )}
+              </div>
+            ))}
           </div>
-        )}
+        ))}
       </div>
     </div>
   );
