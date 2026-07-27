@@ -29,6 +29,16 @@ export const ProductCard: FC<ProductCardProps> = ({
     onUpdateQuantity(key, delta);
   }, [onUpdateQuantity]);
 
+  const handleQtyChangeWithAutoSelect = useCallback((key: string, colorId: number, delta: number) => {
+    const item = selectedItems.get(key);
+    const isSelected = item !== undefined && item.quantity > 0;
+    
+    if (!isSelected) {
+      handleColorSelect(colorId, selectedSize!.id);
+    }
+    handleQuantityChange(key, delta);
+  }, [selectedItems, selectedSize, handleColorSelect, handleQuantityChange]);
+
   const firstImage = useMemo(() => {
     const img = product.images?.[0];
     if (!img) return null;
@@ -58,8 +68,8 @@ export const ProductCard: FC<ProductCardProps> = ({
 
   const chunks = useMemo(() => {
     const result: typeof colorCells[] = [];
-    for (let i = 0; i < colorCells.length; i += 7) {
-      result.push(colorCells.slice(i, i + 7));
+    for (let i = 0; i < colorCells.length; i += 5) {
+      result.push(colorCells.slice(i, i + 5));
     }
     return result;
   }, [colorCells]);
@@ -109,7 +119,7 @@ export const ProductCard: FC<ProductCardProps> = ({
                       <span className="product-card-color-name">{cell.color.name}</span>
                     </th>
                   ))}
-                  {chunk.length < 7 && Array.from({ length: 7 - chunk.length }).map((_, i) => (
+                  {chunk.length < 5 && Array.from({ length: 5 - chunk.length }).map((_, i) => (
                     <th key={`empty-${i}`} className="product-card-color-cell product-card-color-cell--empty" />
                   ))}
                 </tr>
@@ -121,7 +131,7 @@ export const ProductCard: FC<ProductCardProps> = ({
                       <span className="product-card-qty-value">{cell.qty}</span>
                     </td>
                   ))}
-                  {chunk.length < 7 && Array.from({ length: 7 - chunk.length }).map((_, i) => (
+                  {chunk.length < 5 && Array.from({ length: 5 - chunk.length }).map((_, i) => (
                     <td key={`empty-qty-${i}`} className="product-card-qty-cell product-card-qty-cell--empty" />
                   ))}
                 </tr>
@@ -132,7 +142,7 @@ export const ProductCard: FC<ProductCardProps> = ({
                         className="product-card-qty-btn product-card-qty-btn--plus"
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleQuantityChange(cell.key, 1);
+                          handleQtyChangeWithAutoSelect(cell.key, cell.color.id, 1);
                         }}
                         type="button"
                         aria-label={`افزایش ${cell.color.name}`}
@@ -141,7 +151,7 @@ export const ProductCard: FC<ProductCardProps> = ({
                       </button>
                     </td>
                   ))}
-                  {chunk.length < 7 && Array.from({ length: 7 - chunk.length }).map((_, i) => (
+                  {chunk.length < 5 && Array.from({ length: 5 - chunk.length }).map((_, i) => (
                     <td key={`empty-plus-${i}`} className="product-card-action-cell product-card-action-cell--empty" />
                   ))}
                 </tr>
@@ -152,17 +162,17 @@ export const ProductCard: FC<ProductCardProps> = ({
                         className="product-card-qty-btn product-card-qty-btn--minus"
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleQuantityChange(cell.key, -1);
+                          handleQtyChangeWithAutoSelect(cell.key, cell.color.id, -1);
                         }}
                         type="button"
-                        disabled={cell.qty <= 0}
+                        disabled={cell.qty <= 0 && !cell.isSelected}
                         aria-label={`کاهش ${cell.color.name}`}
                       >
                         −
                       </button>
                     </td>
                   ))}
-                  {chunk.length < 7 && Array.from({ length: 7 - chunk.length }).map((_, i) => (
+                  {chunk.length < 5 && Array.from({ length: 5 - chunk.length }).map((_, i) => (
                     <td key={`empty-minus-${i}`} className="product-card-action-cell product-card-action-cell--empty" />
                   ))}
                 </tr>
