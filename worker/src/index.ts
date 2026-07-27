@@ -7,6 +7,7 @@ import { authRoutes } from './routes/auth';
 import { uploadRoutes } from './routes/upload-image';
 import { telegramRoutes } from './routes/telegram';
 import { setupRoutes } from './routes/setup';
+import { testRoutes } from './routes/test';
 import { runMigrations } from './db/migrate';
 import { requireAdmin } from './middleware/admin-auth';
 
@@ -52,6 +53,9 @@ app.route('/api/auth', authRoutes);
 
 // Setup routes (temporary - for initial admin setup)
 app.route('/api/setup', setupRoutes);
+
+// Test routes (for testing notifications)
+app.route('/api/test', testRoutes);
 
 // Admin-protected routes (JWT required for ALL operations)
 app.use('/api/admin/*', requireAdmin);
