@@ -1,11 +1,9 @@
 import { useNavigate } from 'react-router-dom';
 import { backButton } from '@tma.js/sdk-react';
 import { type PropsWithChildren, useEffect } from 'react';
+import { HelpButton } from '@/components/Onboarding';
 
 export function Page({ children, back = true }: PropsWithChildren<{
-  /**
-   * True if it is allowed to go back from this page.
-   */
   back?: boolean
 }>) {
   const navigate = useNavigate();
@@ -20,5 +18,10 @@ export function Page({ children, back = true }: PropsWithChildren<{
     backButton.hide();
   }, [back]);
 
-  return <>{children}</>;
+  return (
+    <>
+      {children}
+      <HelpButton />
+    </>
+  );
 }

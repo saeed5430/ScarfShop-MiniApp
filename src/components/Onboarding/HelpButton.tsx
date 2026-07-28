@@ -1,16 +1,19 @@
 import { type FC, useCallback } from 'react';
 import { useOnboarding } from './OnboardingContext';
 
+import './HelpButton.css';
+
 export const HelpButton: FC = () => {
-  const { startOnboarding } = useOnboarding();
+  const { startOnboarding, isActive } = useOnboarding();
 
   const handleClick = useCallback(() => {
-    startOnboarding(false);
-  }, [startOnboarding]);
+    if (isActive) return;
+    startOnboarding(undefined, false);
+  }, [startOnboarding, isActive]);
 
   return (
     <button
-      className="onboarding-help-btn"
+      className={`onboarding-fab ${isActive ? 'onboarding-fab--hidden' : ''}`}
       onClick={handleClick}
       aria-label="راهنما"
       title="راهنما"

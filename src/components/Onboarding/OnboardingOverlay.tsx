@@ -8,7 +8,6 @@ export function OnboardingOverlay() {
     isActive,
     currentStep,
     steps,
-    isAutoTriggered,
     nextStep,
     prevStep,
     dismissOnboarding,
@@ -17,7 +16,6 @@ export function OnboardingOverlay() {
   } = useOnboarding();
 
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
-  const [visible, setVisible] = useState(false);
 
   const step = steps[currentStep];
 
@@ -30,8 +28,7 @@ export function OnboardingOverlay() {
     const selector = step.targetSelector;
     const el = document.querySelector(selector) as HTMLElement;
     if (el) {
-      const rect = el.getBoundingClientRect();
-      setTargetRect(rect);
+      setTargetRect(el.getBoundingClientRect());
     } else {
       const observer = new MutationObserver(() => {
         const found = document.querySelector(selector) as HTMLElement;
@@ -41,17 +38,16 @@ export function OnboardingOverlay() {
         }
       });
       observer.observe(document.body, { childList: true, subtree: true });
-      setTimeout(() => observer.disconnect(), 3000);
+      setTimeout(() => observer.disconnect(), 4000);
     }
   }, [step]);
 
   useEffect(() => {
-    if (isActive) {
-      observeTarget();
-      setVisible(true);
-    } else {
-      setVisible(false);
+    if (!isActive) {
+      setTargetRect(null);
+      return;
     }
+    observeTarget();
   }, [isActive, observeTarget]);
 
   useEffect(() => {
@@ -62,43 +58,30 @@ export function OnboardingOverlay() {
     const handleScroll = () => {
       if (step?.targetSelector) {
         const el = document.querySelector(step.targetSelector) as HTMLElement;
-        if (el) {
-          setTargetRect(el.getBoundingClientRect());
-        }
+        if (el) setTargetRect(el.getBoundingClientRect());
       }
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
     window.addEventListener('resize', handleScroll, { passive: true });
 
+    const interval = setInterval(() => {
+      if (step?.targetSelector) {
+        const el = document.querySelector(step.targetSelector) as HTMLElement;
+        if (el) setTargetRect(el.getBoundingClientRect());
+      }
+    }, 500);
+
     return () => {
       window.removeEventListener('scroll', handleScroll);
       window.removeEventListener('resize', handleScroll);
+      clearInterval(interval);
     };
   }, [isActive, currentStep, step, observeTarget]);
 
-  useEffect(() => {
-    if (!isActive) return;
-    const recheck = setInterval(() => {
-      if (step?.targetSelector) {
-        const el = document.querySelector(step.targetSelector) as HTMLElement;
-        if (el) {
-          setTargetRect(el.getBoundingClientRect());
-        }
-      }
-    }, 500);
-    return () => clearInterval(recheck);
-  }, [isActive, step, currentStep]);
-
   const handleNext = useCallback(() => {
-    if (currentStep < totalSteps - 1) {
-      const nextStepData = steps[currentStep + 1];
-      if (nextStepData?.beforeStep) {
-        nextStepData.beforeStep();
-      }
-    }
     nextStep();
-  }, [currentStep, totalSteps, steps, nextStep]);
+  }, [nextStep]);
 
   const handlePrev = useCallback(() => {
     prevStep();
@@ -111,7 +94,7 @@ export function OnboardingOverlay() {
   const tooltipStyle = useMemo(() => {
     if (isCenter || !targetRect) return {};
 
-    const gap = 12;
+    const gap = 14;
     let top = 0;
     let left = 0;
 
@@ -124,14 +107,6 @@ export function OnboardingOverlay() {
         top = targetRect.bottom + gap;
         left = targetRect.left + targetRect.width / 2;
         break;
-      case 'left':
-        top = targetRect.top + targetRect.height / 2;
-        left = targetRect.left - gap;
-        break;
-      case 'right':
-        top = targetRect.top + targetRect.height / 2;
-        left = targetRect.right + gap;
-        break;
     }
 
     return { top, left };
@@ -140,34 +115,35 @@ export function OnboardingOverlay() {
   if (!isActive || !step) return null;
 
   return (
-    <div className={`onboarding-overlay ${visible ? 'onboarding-overlay--visible' : ''}`}>
-      {/* Full dim layer */}
-      <div className="onboarding-dim" onClick={dismissOnboarding} />
+    <>
+      {/* Full-page dim backdrop — only catches clicks outside spotlight */}
+      <div className="onboarding-backdrop" onClick={dismissOnboarding} />
 
-      {/* Spotlight cutout */}
+      {/* Spotlight — the "hole" that shows the target clearly */}
       {targetRect && !isCenter && (
         <div
           className="onboarding-spotlight"
           style={{
-            width: targetRect.width + 16,
-            height: targetRect.height + 16,
-            top: targetRect.top - 8,
-            left: targetRect.left - 8,
+            width: targetRect.width + 20,
+            height: targetRect.height + 20,
+            top: targetRect.top - 10,
+            left: targetRect.left - 10,
           }}
-        />
+        >
+          {/* Pulse ring */}
+          <div className="onboarding-pulse" />
+          {/* Animated pointer arrow */}
+          {step?.placement === 'bottom' && <div className="onboarding-arrow onboarding-arrow--up" />}
+          {step?.placement === 'top' && <div className="onboarding-arrow onboarding-arrow--down" />}
+        </div>
       )}
 
-      {/* Tooltip */}
+      {/* Tooltip card */}
       <div
         className={`onboarding-tooltip onboarding-tooltip--${step.placement || 'center'}`}
-        style={isCenter ? {
-          position: 'fixed',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-        } : tooltipStyle}
+        style={isCenter ? undefined : tooltipStyle}
+        onClick={(e) => e.stopPropagation()}
       >
-        {/* Step dots */}
         <div className="onboarding-dots">
           {steps.map((_, i) => (
             <span
@@ -183,40 +159,31 @@ export function OnboardingOverlay() {
         </div>
 
         <div className="onboarding-actions">
-          {!isFirst && !isCenter && (
+          {!isFirst && (
             <button className="onboarding-btn onboarding-btn--ghost" onClick={handlePrev}>
               قبلی
             </button>
           )}
           <div className="onboarding-actions-right">
-            {isAutoTriggered && isLast && (
-              <button className="onboarding-btn onboarding-btn--primary" onClick={completeOnboarding}>
-                شروع کن!
+            {isLast ? (
+              <button
+                className="onboarding-btn onboarding-btn--primary"
+                onClick={completeOnboarding}
+              >
+                متوجه شدم
               </button>
-            )}
-            {!isAutoTriggered && isLast && (
-              <button className="onboarding-btn onboarding-btn--primary" onClick={dismissOnboarding}>
-                بستن
-              </button>
-            )}
-            {isCenter && !isLast && (
+            ) : (
               <button className="onboarding-btn onboarding-btn--primary" onClick={handleNext}>
-                {isFirst ? 'شروع کن' : 'بعدی'}
-              </button>
-            )}
-            {!isCenter && !isLast && (
-              <button className="onboarding-btn onboarding-btn--primary" onClick={handleNext}>
-                بعدی
+                {isFirst ? 'ادامه' : 'بعدی'}
               </button>
             )}
           </div>
         </div>
 
-        {/* Skip button */}
         <button className="onboarding-skip" onClick={dismissOnboarding}>
           رد کردن
         </button>
       </div>
-    </div>
+    </>
   );
 }

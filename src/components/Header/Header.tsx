@@ -1,6 +1,5 @@
 import { type FC, useMemo } from 'react';
 import { useAuth } from '@/context/AuthContext.tsx';
-import { HelpButton } from '@/components/Onboarding';
 
 import './Header.css';
 
@@ -37,7 +36,6 @@ export const Header: FC = () => {
       </div>
 
       <div className="header-user">
-        <HelpButton />
         <img
           src={customerAvatar}
           alt={customerName}
