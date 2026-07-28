@@ -1,6 +1,7 @@
 import type { D1Database } from '@cloudflare/workers-types';
 
 export async function runMigrations(db: D1Database): Promise<void> {
+  // Phase 1: Create all tables (safe, uses IF NOT EXISTS)
   const stmts: string[] = [
     `CREATE TABLE IF NOT EXISTS customers (id TEXT PRIMARY KEY, user_type TEXT DEFAULT 'new', first_name TEXT NOT NULL, last_name TEXT, username TEXT, language_code TEXT, avatar_url TEXT, phone TEXT, address TEXT, postal_code TEXT, invite_code TEXT, is_premium INTEGER DEFAULT 0, created_at INTEGER DEFAULT (unixepoch()), last_active INTEGER DEFAULT (unixepoch()))`,
     `CREATE TABLE IF NOT EXISTS admins (id TEXT PRIMARY KEY, customer_id TEXT, username TEXT UNIQUE NOT NULL, email TEXT UNIQUE, first_name TEXT NOT NULL, last_name TEXT, avatar_url TEXT, password_hash TEXT, created_at INTEGER DEFAULT (unixepoch()), updated_at INTEGER DEFAULT (unixepoch()))`,
@@ -37,5 +38,16 @@ export async function runMigrations(db: D1Database): Promise<void> {
 
   for (const sql of stmts) {
     await db.prepare(sql).run();
+  }
+
+  // Phase 2: Add onboarding_version column to customers (safe ALTER TABLE)
+  try {
+    await db.prepare(
+      `ALTER TABLE customers ADD COLUMN onboarding_version INTEGER NOT NULL DEFAULT 0`
+    ).run();
+    console.log('[migrate] Added onboarding_version column to customers table');
+  } catch {
+    // Column already exists — safe to ignore
+    console.log('[migrate] onboarding_version column already exists, skipping');
   }
 }
