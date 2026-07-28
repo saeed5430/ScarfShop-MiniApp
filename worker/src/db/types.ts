@@ -11,6 +11,7 @@ export interface Customer {
   postal_code: string | null;
   invite_code: string | null;
   is_premium: boolean;
+  onboarding_version: number;
   created_at: string;
   last_active: string;
 }

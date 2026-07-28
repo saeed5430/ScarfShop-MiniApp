@@ -48,6 +48,7 @@ export interface Customer {
   postal_code: string | null;
   invite_code: string | null;
   is_premium: boolean;
+  onboarding_version: number;
   created_at: string;
   last_active: string;
 }
@@ -69,6 +70,13 @@ export async function getCurrentCustomer(): Promise<LoginResponse> {
 
 export async function checkIsAdmin(): Promise<{ is_admin: boolean }> {
   return apiRequest<{ is_admin: boolean }>('/api/auth/is-admin');
+}
+
+export async function updateOnboardingVersion(version: number): Promise<{ customer: Customer }> {
+  return apiRequest<{ customer: Customer }>('/api/auth/onboarding', {
+    method: 'PUT',
+    body: JSON.stringify({ version }),
+  });
 }
 
 export async function updateProfile(data: {

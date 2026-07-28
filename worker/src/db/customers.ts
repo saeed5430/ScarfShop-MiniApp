@@ -142,6 +142,12 @@ export class CustomersDB {
     await stmt.bind(jalaliNow, id).run();
   }
 
+  async updateOnboardingVersion(id: string, version: number): Promise<Customer | null> {
+    const stmt = this.db.prepare('UPDATE customers SET onboarding_version = ? WHERE id = ?');
+    await stmt.bind(version, id).run();
+    return this.findById(id);
+  }
+
   async list(limit = 50, offset = 0): Promise<Customer[]> {
     const stmt = this.db.prepare('SELECT * FROM customers ORDER BY created_at DESC LIMIT ? OFFSET ?');
     const results = await stmt.bind(limit, offset).all<Customer>();

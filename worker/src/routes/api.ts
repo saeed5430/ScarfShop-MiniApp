@@ -74,6 +74,29 @@ apiRoutes.get('/auth/is-admin', async (c) => {
   return c.json({ is_admin: admin !== null });
 });
 
+// Update onboarding version
+apiRoutes.put('/auth/onboarding', async (c) => {
+  const db = c.env.DB;
+  if (!db) return c.json({ error: 'Database not configured' }, 500);
+
+  const token = c.req.header('Authorization')?.replace('Bearer ', '');
+  if (!token) return c.json({ error: 'Token required' }, 401);
+
+  const sessionResult = await validateSession(db, token);
+  if (!sessionResult.valid) return c.json({ error: sessionResult.error }, 401);
+
+  const body = await c.req.json<{ version: number }>();
+  if (typeof body.version !== 'number' || body.version < 0) {
+    return c.json({ error: 'Invalid version value' }, 400);
+  }
+
+  const database = new Database(db);
+  const customer = await database.customers.updateOnboardingVersion(sessionResult.customer_id!, body.version);
+  if (!customer) return c.json({ error: 'Customer not found' }, 404);
+
+  return c.json({ customer });
+});
+
 // Update customer profile
 apiRoutes.put('/auth/profile', async (c) => {
   const db = c.env.DB;

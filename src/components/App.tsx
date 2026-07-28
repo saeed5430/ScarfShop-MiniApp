@@ -4,6 +4,7 @@ import { AppRoot } from '@telegram-apps/telegram-ui';
 
 import { routes } from '@/navigation/routes.tsx';
 import { useAuth } from '@/context/AuthContext';
+import { OnboardingProvider, OnboardingOverlay } from '@/components/Onboarding';
 
 function LoadingScreen() {
   return (
@@ -46,16 +47,19 @@ export function App() {
       appearance={isDark ? 'dark' : 'light'}
       platform={['macos', 'ios'].includes(lp.tgWebAppPlatform) ? 'ios' : 'base'}
     >
-      <HashRouter>
-        {loading ? (
-          <LoadingScreen />
-        ) : (
-          <Routes>
-            {routes.map((route) => <Route key={route.path} {...route} />)}
-            <Route path="*" element={<Navigate to="/"/>}/>
-          </Routes>
-        )}
-      </HashRouter>
+      <OnboardingProvider>
+        <HashRouter>
+          {loading ? (
+            <LoadingScreen />
+          ) : (
+            <Routes>
+              {routes.map((route) => <Route key={route.path} {...route} />)}
+              <Route path="*" element={<Navigate to="/"/>}/>
+            </Routes>
+          )}
+        </HashRouter>
+        <OnboardingOverlay />
+      </OnboardingProvider>
     </AppRoot>
   );
 }

@@ -1,0 +1,211 @@
+.onboarding-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  direction: rtl;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.onboarding-overlay--visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.onboarding-dim {
+  position: absolute;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(2px);
+}
+
+.onboarding-spotlight {
+  position: fixed;
+  border-radius: 16px;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.55), 0 0 40px rgba(124, 58, 237, 0.15);
+  z-index: 1;
+  animation: spotlightIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+}
+
+@keyframes spotlightIn {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.onboarding-tooltip {
+  position: fixed;
+  z-index: 2;
+  max-width: 320px;
+  width: calc(100% - 40px);
+  background-color: var(--color-surface, #FFFFFF);
+  border-radius: 20px;
+  padding: 20px;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.2), 0 2px 12px rgba(0, 0, 0, 0.1);
+  animation: tooltipIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+@keyframes tooltipIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.onboarding-tooltip--top {
+  transform: translate(-50%, -100%);
+}
+
+.onboarding-tooltip--bottom {
+  transform: translateX(-50%);
+}
+
+.onboarding-tooltip--left {
+  transform: translate(-100%, -50%);
+}
+
+.onboarding-tooltip--right {
+  transform: translateY(-50%);
+}
+
+.onboarding-tooltip--center {
+  position: fixed !important;
+}
+
+.onboarding-dots {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.onboarding-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: var(--color-border, #E5E7EB);
+  transition: all 0.3s ease;
+}
+
+.onboarding-dot--active {
+  width: 20px;
+  border-radius: 4px;
+  background-color: var(--color-primary, #7C3AED);
+}
+
+.onboarding-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.onboarding-title {
+  font-family: 'Vazirmatn', 'Estedad', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-text-primary, #111827);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.onboarding-desc {
+  font-family: 'Vazirmatn', 'Estedad', sans-serif;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--color-text-secondary, #6B7280);
+  margin: 0;
+  line-height: 1.7;
+}
+
+.onboarding-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.onboarding-actions-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-inline-start: auto;
+}
+
+.onboarding-btn {
+  height: 40px;
+  border-radius: 12px;
+  font-family: 'Vazirmatn', 'Estedad', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 16px;
+  transition: all 0.15s ease;
+  border: none;
+  gap: 6px;
+}
+
+.onboarding-btn:active {
+  transform: scale(0.96);
+}
+
+.onboarding-btn--primary {
+  background-color: var(--color-primary, #7C3AED);
+  color: white;
+}
+
+.onboarding-btn--ghost {
+  background-color: transparent;
+  color: var(--color-text-secondary, #6B7280);
+  padding: 0 4px;
+}
+
+.onboarding-btn--ghost:active {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.onboarding-skip {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  background: none;
+  border: none;
+  font-family: 'Vazirmatn', 'Estedad', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-secondary, #6B7280);
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 8px;
+  transition: all 0.15s ease;
+}
+
+.onboarding-skip:active {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+  .onboarding-dim {
+    background-color: rgba(0, 0, 0, 0.65);
+  }
+
+  .onboarding-spotlight {
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.65), 0 0 40px rgba(167, 139, 250, 0.15);
+  }
+}
