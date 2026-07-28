@@ -2,33 +2,39 @@ import type { OnboardingStep } from '../types';
 
 export const quickBuySteps: OnboardingStep[] = [
   {
-    targetSelector: '.product-card:first-child',
-    title: 'لیست محصولات',
-    description: 'محصولات به همراه رنگ‌ها و سایزهای مختلف در این بخش نمایش داده می‌شوند.',
+    targetSelector: null,
+    title: 'سفارش سریع',
+    description: 'در این صفحه می‌توانید محصولات را مشاهده کرده و سفارش خود را ثبت کنید.',
+    placement: 'center',
+  },
+  {
+    targetSelector: '.filter-bar',
+    title: 'جستجو و دسته‌بندی',
+    description: 'با استفاده از نوار جستجو و فیلتر دسته‌بندی، محصول مورد نظر خود را پیدا کنید.',
+    placement: 'bottom',
+  },
+  {
+    targetSelector: '.quickbuy-list',
+    title: 'محصولات',
+    description: 'محصولات به همراه رنگ‌های موجود نمایش داده می‌شوند.',
     placement: 'top',
   },
   {
-    targetSelector: '.product-card-color-btn',
+    targetSelector: '.product-card-v-color-grid',
     title: 'انتخاب رنگ',
-    description: 'روی دکمه هر رنگ کلیک کنید تا آن رنگ برای محصول انتخاب شود. توجه کنید که باید روی خود رنگ کلیک کنید، نه روی محصول.',
+    description: 'روی رنگ مورد نظر کلیک کنید تا به سبد خرید اضافه شود.',
     placement: 'top',
   },
   {
-    targetSelector: '.product-card-qty-controls, .product-card-qty-btn--plus',
+    targetSelector: null,
     title: 'تنظیم تعداد',
-    description: 'با دکمه + تعداد را افزایش دهید. با دکمه − تعداد را کاهش دهید. این کنترل‌ها پس از انتخاب رنگ ظاهر می‌شوند.',
-    placement: 'top',
+    description: 'پس از انتخاب رنگ، دکمه‌های + و − برای تنظیم تعداد ظاهر می‌شوند.',
+    placement: 'center',
   },
   {
-    targetSelector: '.quickbuy-order-summary',
-    title: 'خلاصه سفارش',
-    description: 'پس از انتخاب محصولات، خلاصه سفارش شامل رنگ، سایز و تعداد را بررسی کنید.',
-    placement: 'top',
-  },
-  {
-    targetSelector: '.quickbuy-submit-btn',
+    targetSelector: null,
     title: 'ثبت سفارش',
-    description: 'پس از بررسی نهایی، این دکمه را بزنید تا سفارش شما ثبت شود.',
-    placement: 'top',
+    description: 'پس از انتخاب محصولات، خلاصه سفارش را در پایین صفحه بررسی کرده و دکمه ثبت را بزنید.',
+    placement: 'center',
   },
 ];

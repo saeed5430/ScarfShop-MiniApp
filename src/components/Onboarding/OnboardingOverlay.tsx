@@ -89,38 +89,38 @@ export function OnboardingOverlay() {
 
   const isFirst = currentStep === 0;
   const isLast = currentStep === totalSteps - 1;
-  const isCenter = step?.placement === 'center';
+  const hasTarget = step?.targetSelector != null && targetRect != null;
+  const isCenter = !hasTarget || step?.placement === 'center';
+  const effectivePlacement = isCenter ? 'center' : (step?.placement ?? 'center');
 
   const tooltipStyle = useMemo(() => {
-    if (isCenter || !targetRect) return {};
+    if (effectivePlacement === 'center' || !targetRect) return {};
 
     const gap = 14;
-    let top = 0;
-    let left = 0;
 
     switch (step?.placement) {
       case 'top':
-        top = targetRect.top - gap;
-        left = targetRect.left + targetRect.width / 2;
-        break;
+        return {
+          top: targetRect.top - gap,
+          left: targetRect.left + targetRect.width / 2,
+        };
       case 'bottom':
-        top = targetRect.bottom + gap;
-        left = targetRect.left + targetRect.width / 2;
-        break;
+        return {
+          top: targetRect.bottom + gap,
+          left: targetRect.left + targetRect.width / 2,
+        };
+      default:
+        return {};
     }
-
-    return { top, left };
-  }, [isCenter, targetRect, step]);
+  }, [effectivePlacement, targetRect, step]);
 
   if (!isActive || !step) return null;
 
   return (
     <>
-      {/* Full-page dim backdrop — only catches clicks outside spotlight */}
       <div className="onboarding-backdrop" onClick={dismissOnboarding} />
 
-      {/* Spotlight — the "hole" that shows the target clearly */}
-      {targetRect && !isCenter && (
+      {targetRect != null && !isCenter && (
         <div
           className="onboarding-spotlight"
           style={{
@@ -130,18 +130,15 @@ export function OnboardingOverlay() {
             left: targetRect.left - 10,
           }}
         >
-          {/* Pulse ring */}
           <div className="onboarding-pulse" />
-          {/* Animated pointer arrow */}
           {step?.placement === 'bottom' && <div className="onboarding-arrow onboarding-arrow--up" />}
           {step?.placement === 'top' && <div className="onboarding-arrow onboarding-arrow--down" />}
         </div>
       )}
 
-      {/* Tooltip card */}
       <div
-        className={`onboarding-tooltip onboarding-tooltip--${step.placement || 'center'}`}
-        style={isCenter ? undefined : tooltipStyle}
+        className={`onboarding-tooltip onboarding-tooltip--${effectivePlacement}`}
+        style={tooltipStyle}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="onboarding-dots">
