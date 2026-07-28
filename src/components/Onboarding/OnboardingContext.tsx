@@ -6,7 +6,6 @@ import { ONBOARDING_VERSION } from './types';
 import type { PageName, OnboardingStep } from './types';
 
 export type { PageName, OnboardingStep };
-
 export { ONBOARDING_VERSION };
 
 const LS_PREFIX = 'onboard_page_';
@@ -17,8 +16,7 @@ interface OnboardingContextType {
   currentStep: number;
   steps: OnboardingStep[];
   currentPage: PageName | null;
-  isAutoTriggered: boolean;
-  startOnboarding: (page?: PageName, auto?: boolean) => void;
+  startOnboarding: (page?: PageName) => void;
   completeOnboarding: () => Promise<void>;
   dismissOnboarding: () => void;
   nextStep: () => void;
@@ -31,7 +29,6 @@ const OnboardingContext = createContext<OnboardingContextType>({
   currentStep: 0,
   steps: [],
   currentPage: null,
-  isAutoTriggered: false,
   startOnboarding: () => {},
   completeOnboarding: async () => {},
   dismissOnboarding: () => {},
@@ -70,7 +67,6 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
   const [currentStep, setCurrentStep] = useState(0);
   const [steps, setSteps] = useState<OnboardingStep[]>([]);
   const [currentPage, setCurrentPage] = useState<PageName | null>(null);
-  const [isAutoTriggered, setIsAutoTriggered] = useState(false);
 
   const autoShownRef = useRef(false);
   const pageRef = useRef<PageName>('home');
@@ -80,7 +76,14 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
     return tour?.steps ?? [];
   }, []);
 
-  const startOnboarding = useCallback((page?: PageName, auto = false) => {
+  const stop = useCallback(() => {
+    setIsActive(false);
+    setCurrentStep(0);
+    setSteps([]);
+    setCurrentPage(null);
+  }, []);
+
+  const startOnboarding = useCallback((page?: PageName) => {
     const targetPage = page || getPageFromHash();
     const pageSteps = getStepsForPage(targetPage);
     if (pageSteps.length === 0) return;
@@ -89,41 +92,27 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
     setCurrentPage(targetPage);
     setSteps(pageSteps);
     setCurrentStep(0);
-    setIsAutoTriggered(auto);
     setIsActive(true);
   }, [getStepsForPage]);
 
   const completeOnboarding = useCallback(async () => {
     const completedPage = pageRef.current;
-
-    // Mark this page as completed in localStorage
     markPageCompleted(completedPage);
-
-    // Close overlay
     autoShownRef.current = true;
-    setIsActive(false);
-    setCurrentStep(0);
-    setCurrentPage(null);
-    setSteps([]);
+    stop();
 
-    // If all pages are now completed, save to DB
     if (allPagesCompleted()) {
       try {
         await updateOnboardingVersion(ONBOARDING_VERSION);
         await refreshCustomer();
-      } catch {
-        // Silently fail
-      }
+      } catch { /* ignore */ }
     }
-  }, [refreshCustomer]);
+  }, [refreshCustomer, stop]);
 
   const dismissOnboarding = useCallback(() => {
     autoShownRef.current = true;
-    setIsActive(false);
-    setCurrentStep(0);
-    setCurrentPage(null);
-    setSteps([]);
-  }, []);
+    stop();
+  }, [stop]);
 
   const nextStep = useCallback(() => {
     setCurrentStep((prev) => Math.min(prev + 1, steps.length - 1));
@@ -149,21 +138,23 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
       autoShownRef.current = true;
       return;
     }
+    if (isActive) return;
 
     const timer = setTimeout(() => {
-      startOnboarding(undefined, true);
+      if (!isActive) {
+        startOnboarding();
+      }
     }, 600);
 
     return () => clearTimeout(timer);
-  }, [customer, startOnboarding]);
+  }, [customer, startOnboarding, isActive]);
 
   // Watch hash changes to sync currentPage
   useEffect(() => {
     const handleHashChange = () => {
-      const page = getPageFromHash();
-      pageRef.current = page;
+      pageRef.current = getPageFromHash();
       if (!isActive) {
-        setCurrentPage(page);
+        setCurrentPage(getPageFromHash());
       }
     };
 
@@ -179,7 +170,6 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
         currentStep,
         steps,
         currentPage,
-        isAutoTriggered,
         startOnboarding,
         completeOnboarding,
         dismissOnboarding,

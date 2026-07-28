@@ -4,12 +4,14 @@ import { useOnboarding } from './OnboardingContext';
 import './HelpButton.css';
 
 export const HelpButton: FC = () => {
-  const { startOnboarding, isActive } = useOnboarding();
+  const { startOnboarding, isActive, dismissOnboarding } = useOnboarding();
 
   const handleClick = useCallback(() => {
-    if (isActive) return;
-    startOnboarding(undefined, false);
-  }, [startOnboarding, isActive]);
+    if (isActive) {
+      dismissOnboarding();
+    }
+    startOnboarding();
+  }, [startOnboarding, isActive, dismissOnboarding]);
 
   return (
     <button
