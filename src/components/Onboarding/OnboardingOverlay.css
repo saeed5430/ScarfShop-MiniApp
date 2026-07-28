@@ -1,50 +1,19 @@
-/* =================== Backdrop =================== */
-.onboarding-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 9999;
-  background: rgba(0, 0, 0, 0.5);
-  animation: backdropFadeIn 0.35s ease;
-}
-
-@keyframes backdropFadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-/* =================== Spotlight =================== */
-.onboarding-spotlight {
+/* =================== Purple frame =================== */
+.onboarding-frame {
   position: fixed;
   z-index: 10000;
   border-radius: 16px;
-  animation: spotlightIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  border: 2.5px solid #7C3AED;
+  background: rgba(124, 58, 237, 0.06);
+  box-shadow: 0 0 24px rgba(124, 58, 237, 0.35), 0 0 60px rgba(124, 58, 237, 0.15);
+  animation: frameIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
   pointer-events: none;
 }
 
-.onboarding-spotlight::before {
-  content: '';
-  position: absolute;
-  inset: -12px;
-  border-radius: 22px;
-  background: transparent;
-  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.55);
-  pointer-events: none;
-}
-
-.onboarding-spotlight::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.18);
-  box-shadow: inset 0 0 30px rgba(255, 255, 255, 0.12);
-  pointer-events: none;
-}
-
-@keyframes spotlightIn {
+@keyframes frameIn {
   from {
     opacity: 0;
-    transform: scale(0.88);
+    transform: scale(0.92);
   }
   to {
     opacity: 1;
@@ -52,67 +21,24 @@
   }
 }
 
-/* =================== Bright pulse ring =================== */
-.onboarding-pulse {
+.onboarding-frame-pulse {
   position: absolute;
-  inset: -6px;
+  inset: -5px;
   border-radius: 20px;
-  border: 3px solid #7C3AED;
-  box-shadow: 0 0 20px rgba(124, 58, 237, 0.6), 0 0 60px rgba(124, 58, 237, 0.3);
-  animation: brightPulse 1.8s ease-in-out infinite;
+  border: 2px solid rgba(124, 58, 237, 0.5);
+  animation: framePulse 2s ease-in-out infinite;
   pointer-events: none;
 }
 
-@keyframes brightPulse {
+@keyframes framePulse {
   0%, 100% {
-    opacity: 1;
+    opacity: 0.8;
     transform: scale(1);
-    box-shadow: 0 0 20px rgba(124, 58, 237, 0.6), 0 0 60px rgba(124, 58, 237, 0.3);
   }
   50% {
-    opacity: 0.6;
-    transform: scale(1.04);
-    box-shadow: 0 0 30px rgba(124, 58, 237, 0.8), 0 0 80px rgba(124, 58, 237, 0.4);
+    opacity: 0.3;
+    transform: scale(1.05);
   }
-}
-
-/* =================== Arrow indicators =================== */
-.onboarding-arrow {
-  position: absolute;
-  width: 28px;
-  height: 28px;
-  z-index: 10001;
-  animation: arrowBob 1.2s ease-in-out infinite;
-}
-
-.onboarding-arrow::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border: 3px solid #7C3AED;
-  border-left: none;
-  border-bottom: none;
-  border-radius: 4px;
-  box-shadow: 0 0 12px rgba(124, 58, 237, 0.5);
-}
-
-.onboarding-arrow--up {
-  bottom: -36px;
-  left: 50%;
-  margin-left: -14px;
-  transform: rotate(45deg);
-}
-
-.onboarding-arrow--down {
-  top: -36px;
-  left: 50%;
-  margin-left: -14px;
-  transform: rotate(-135deg);
-}
-
-@keyframes arrowBob {
-  0%, 100% { transform: rotate(45deg) translateY(0); }
-  50% { transform: rotate(45deg) translateY(6px); }
 }
 
 /* =================== Tooltip =================== */
@@ -124,7 +50,7 @@
   background-color: #FFFFFF;
   border-radius: 20px;
   padding: 20px;
-  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.2), 0 2px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.18), 0 2px 12px rgba(0, 0, 0, 0.08);
   animation: tooltipIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   display: flex;
   flex-direction: column;
@@ -141,21 +67,6 @@
     opacity: 1;
     transform: translateY(0) scale(1);
   }
-}
-
-.onboarding-tooltip--center {
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%) !important;
-  text-align: center;
-}
-
-.onboarding-tooltip--bottom {
-  transform: translateX(-50%);
-}
-
-.onboarding-tooltip--top {
-  transform: translate(-50%, -100%);
 }
 
 /* =================== Step dots =================== */
@@ -276,38 +187,14 @@
 
 /* =================== Dark mode =================== */
 @media (prefers-color-scheme: dark) {
-  .onboarding-backdrop {
-    background: rgba(0, 0, 0, 0.65);
+  .onboarding-frame {
+    border-color: #8B5CF6;
+    background: rgba(139, 92, 246, 0.10);
+    box-shadow: 0 0 24px rgba(139, 92, 246, 0.4), 0 0 60px rgba(139, 92, 246, 0.2);
   }
 
-  .onboarding-spotlight::before {
-    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.65);
-  }
-
-  .onboarding-pulse {
-    box-shadow: 0 0 20px rgba(139, 92, 246, 0.7), 0 0 60px rgba(139, 92, 246, 0.4);
-  }
-
-  @keyframes brightPulse {
-    0%, 100% {
-      opacity: 1;
-      transform: scale(1);
-      box-shadow: 0 0 20px rgba(139, 92, 246, 0.7), 0 0 60px rgba(139, 92, 246, 0.4);
-    }
-    50% {
-      opacity: 0.6;
-      transform: scale(1.04);
-      box-shadow: 0 0 30px rgba(139, 92, 246, 0.9), 0 0 80px rgba(139, 92, 246, 0.5);
-    }
-  }
-
-  .onboarding-arrow::before {
-    box-shadow: 0 0 12px rgba(139, 92, 246, 0.6);
-  }
-
-  .onboarding-spotlight::after {
-    background: rgba(255, 255, 255, 0.10);
-    box-shadow: inset 0 0 30px rgba(255, 255, 255, 0.06);
+  .onboarding-frame-pulse {
+    border-color: rgba(139, 92, 246, 0.5);
   }
 
   .onboarding-tooltip {

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useOnboarding } from './OnboardingContext';
 
 import './OnboardingOverlay.css';
@@ -16,6 +16,7 @@ export function OnboardingOverlay() {
   } = useOnboarding();
 
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
+  const tooltipRef = useRef<HTMLDivElement>(null);
 
   const step = steps[currentStep];
 
@@ -43,16 +44,12 @@ export function OnboardingOverlay() {
   }, [step]);
 
   useEffect(() => {
-    if (!isActive) {
-      setTargetRect(null);
-      return;
-    }
+    if (!isActive) { setTargetRect(null); return; }
     observeTarget();
   }, [isActive, observeTarget]);
 
   useEffect(() => {
     if (!isActive) return;
-
     observeTarget();
 
     const handleScroll = () => {
@@ -64,7 +61,6 @@ export function OnboardingOverlay() {
 
     window.addEventListener('scroll', handleScroll, { passive: true });
     window.addEventListener('resize', handleScroll, { passive: true });
-
     const interval = setInterval(() => {
       if (step?.targetSelector) {
         const el = document.querySelector(step.targetSelector) as HTMLElement;
@@ -79,65 +75,74 @@ export function OnboardingOverlay() {
     };
   }, [isActive, currentStep, step, observeTarget]);
 
-  const handleNext = useCallback(() => {
-    nextStep();
-  }, [nextStep]);
+  // Auto-scroll to target
+  useEffect(() => {
+    if (!isActive || !step?.targetSelector) return;
+    const el = document.querySelector(step.targetSelector) as HTMLElement;
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setTimeout(() => {
+        setTargetRect(el.getBoundingClientRect());
+      }, 400);
+    }
+  }, [isActive, currentStep, step]);
 
-  const handlePrev = useCallback(() => {
-    prevStep();
-  }, [prevStep]);
+  const handleNext = useCallback(() => { nextStep(); }, [nextStep]);
+  const handlePrev = useCallback(() => { prevStep(); }, [prevStep]);
 
   const isFirst = currentStep === 0;
   const isLast = currentStep === totalSteps - 1;
   const hasTarget = step?.targetSelector != null && targetRect != null;
-  const isCenter = !hasTarget || step?.placement === 'center';
-  const effectivePlacement = isCenter ? 'center' : (step?.placement ?? 'center');
 
-  const tooltipStyle = useMemo(() => {
-    if (effectivePlacement === 'center' || !targetRect) return {};
-
+  // Compute tooltip position clamped to viewport
+  const tooltipStyle: Record<string, number | string> = {};
+  if (hasTarget && targetRect && step?.placement !== 'center') {
+    const tooltipW = 320;
     const gap = 14;
+    let top = 0, left = 0;
 
-    switch (step?.placement) {
-      case 'top':
-        return {
-          top: targetRect.top - gap,
-          left: targetRect.left + targetRect.width / 2,
-        };
-      case 'bottom':
-        return {
-          top: targetRect.bottom + gap,
-          left: targetRect.left + targetRect.width / 2,
-        };
-      default:
-        return {};
+    if (step.placement === 'top') {
+      top = targetRect.top - gap;
+      left = targetRect.left + targetRect.width / 2;
+      // Clamp
+      left = Math.max(tooltipW / 2 + 8, Math.min(left, window.innerWidth - tooltipW / 2 - 8));
+      tooltipStyle.top = top;
+      tooltipStyle.left = left;
+      tooltipStyle.transform = 'translate(-50%, -100%)';
+    } else {
+      top = targetRect.bottom + gap;
+      left = targetRect.left + targetRect.width / 2;
+      // Clamp
+      left = Math.max(tooltipW / 2 + 8, Math.min(left, window.innerWidth - tooltipW / 2 - 8));
+      tooltipStyle.top = top;
+      tooltipStyle.left = left;
+      tooltipStyle.transform = 'translateX(-50%)';
     }
-  }, [effectivePlacement, targetRect, step]);
+  }
 
   if (!isActive || !step) return null;
 
   return (
     <>
-      <div className="onboarding-backdrop" onClick={dismissOnboarding} />
-
-      {targetRect != null && !isCenter && (
+      {/* Purple frame around target */}
+      {hasTarget && targetRect && step.placement !== 'center' && (
         <div
-          className="onboarding-spotlight"
+          className="onboarding-frame"
           style={{
-            width: targetRect.width + 20,
-            height: targetRect.height + 20,
-            top: targetRect.top - 10,
-            left: targetRect.left - 10,
+            width: targetRect.width + 12,
+            height: targetRect.height + 12,
+            top: targetRect.top - 6,
+            left: targetRect.left - 6,
           }}
         >
-          <div className="onboarding-pulse" />
-          {step?.placement === 'bottom' && <div className="onboarding-arrow onboarding-arrow--up" />}
-          {step?.placement === 'top' && <div className="onboarding-arrow onboarding-arrow--down" />}
+          <div className="onboarding-frame-pulse" />
         </div>
       )}
 
+      {/* Tooltip card */}
       <div
-        className={`onboarding-tooltip onboarding-tooltip--${effectivePlacement}`}
+        ref={tooltipRef}
+        className="onboarding-tooltip"
         style={tooltipStyle}
         onClick={(e) => e.stopPropagation()}
       >
@@ -163,10 +168,7 @@ export function OnboardingOverlay() {
           )}
           <div className="onboarding-actions-right">
             {isLast ? (
-              <button
-                className="onboarding-btn onboarding-btn--primary"
-                onClick={completeOnboarding}
-              >
+              <button className="onboarding-btn onboarding-btn--primary" onClick={completeOnboarding}>
                 متوجه شدم
               </button>
             ) : (

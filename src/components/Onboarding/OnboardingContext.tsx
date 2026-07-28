@@ -126,19 +126,21 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const nextStep = useCallback(() => {
-    setCurrentStep((prev) => {
-      const next = prev + 1;
-      if (next < steps.length - 1) {
-        const s = steps[next + 1];
-        if (s?.beforeStep) s.beforeStep();
-      }
-      return Math.min(next, steps.length - 1);
-    });
-  }, [steps]);
+    setCurrentStep((prev) => Math.min(prev + 1, steps.length - 1));
+  }, [steps.length]);
 
   const prevStep = useCallback(() => {
     setCurrentStep((prev) => Math.max(prev - 1, 0));
   }, []);
+
+  // Call beforeStep when entering a new step
+  useEffect(() => {
+    if (!isActive) return;
+    const s = steps[currentStep];
+    if (s?.beforeStep) {
+      s.beforeStep();
+    }
+  }, [currentStep, isActive, steps]);
 
   // Auto-trigger: once per session, only if onboarding_version === 0
   useEffect(() => {

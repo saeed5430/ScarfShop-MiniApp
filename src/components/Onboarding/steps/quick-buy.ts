@@ -26,15 +26,19 @@ export const quickBuySteps: OnboardingStep[] = [
     placement: 'top',
   },
   {
-    targetSelector: null,
+    targetSelector: '.product-card-v-selected-controls',
     title: 'تنظیم تعداد',
-    description: 'پس از انتخاب رنگ، دکمه‌های + و − برای تنظیم تعداد ظاهر می‌شوند.',
-    placement: 'center',
+    description: 'با دکمه‌های + و − تعداد مورد نظر خود را تنظیم کنید.',
+    placement: 'top',
+    beforeStep: () => {
+      const btn = document.querySelector('.product-card-v-color-btn') as HTMLElement;
+      if (btn) btn.click();
+    },
   },
   {
-    targetSelector: null,
+    targetSelector: '.quickbuy-order-summary',
     title: 'ثبت سفارش',
-    description: 'پس از انتخاب محصولات، خلاصه سفارش را در پایین صفحه بررسی کرده و دکمه ثبت را بزنید.',
-    placement: 'center',
+    description: 'پس از بررسی نهایی، دکمه ثبت سفارش را بزنید.',
+    placement: 'top',
   },
 ];
