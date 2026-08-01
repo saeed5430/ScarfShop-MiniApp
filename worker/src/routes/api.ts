@@ -70,8 +70,12 @@ apiRoutes.get('/auth/is-admin', async (c) => {
   const customer = await database.customers.findById(result.customer_id!);
   if (!customer) return c.json({ is_admin: false }, 200);
 
-  const admin = await database.admins.findByUsername(customer.username || '');
-  return c.json({ is_admin: admin !== null });
+  // Check by username (Telegram username)
+  const adminByUsername = await database.admins.findByUsername(customer.username || '');
+  // Also check by customer_id (Telegram user ID)
+  const adminByCustomerId = customer.id ? await database.admins.findByCustomerId(customer.id) : null;
+
+  return c.json({ is_admin: adminByUsername !== null || adminByCustomerId !== null });
 });
 
 // Update customer profile

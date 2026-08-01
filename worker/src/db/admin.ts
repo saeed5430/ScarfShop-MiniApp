@@ -64,6 +64,11 @@ export class AdminsDB {
     return row ? this.parseRow(row) : null;
   }
 
+  async findByCustomerId(customerId: string): Promise<Admin | null> {
+    const row = await this.db.prepare('SELECT * FROM admins WHERE customer_id = ?').bind(customerId).first();
+    return row ? this.parseRow(row) : null;
+  }
+
   async findByEmail(email: string): Promise<Admin | null> {
     const row = await this.db.prepare('SELECT * FROM admins WHERE email = ?').bind(email).first();
     return row ? this.parseRow(row) : null;
