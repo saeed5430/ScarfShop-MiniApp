@@ -55,6 +55,7 @@
   height: 100%;
   object-fit: contain;
   object-position: center;
+  transform: scale(1.45);
 }
 
 .product-card-image-placeholder {
@@ -138,7 +139,7 @@
   color: var(--color-text-secondary);
   text-align: center;
   line-height: 1.2;
-  max-width: 44px;
+  max-width: 48px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

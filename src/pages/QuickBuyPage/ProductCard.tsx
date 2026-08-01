@@ -57,12 +57,19 @@ export const ProductCard: FC<ProductCardProps> = ({
       const item = selectedItems.get(key);
       const isSelected = item !== undefined && item.quantity > 0;
       const qty = item?.quantity ?? 0;
+      
+      // Dynamic font size for color name - smaller for longer names
+      const nameLen = color.name.length;
+      let nameFontSize = 11;
+      if (nameLen > 8) nameFontSize = 9;
+      else if (nameLen > 6) nameFontSize = 10;
 
       return {
         key,
         color,
         isSelected,
         qty,
+        nameFontSize,
       };
     });
   }, [colors, product.id, selectedSize, selectedItems]);
@@ -117,7 +124,7 @@ export const ProductCard: FC<ProductCardProps> = ({
                           style={{ backgroundColor: cell.color.hex }}
                         />
                       </button>
-                      <span className="product-card-color-name">{cell.color.name}</span>
+                      <span className="product-card-color-name" style={{ fontSize: cell.nameFontSize }}>{cell.color.name}</span>
                     </th>
                   ))}
                   {chunk.length < 5 && Array.from({ length: 5 - chunk.length }).map((_, i) => (
