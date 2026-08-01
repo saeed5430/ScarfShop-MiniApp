@@ -35,8 +35,9 @@ export const ProductCard: FC<ProductCardProps> = ({
     
     if (!isSelected) {
       handleColorSelect(colorId, selectedSize!.id);
+    } else {
+      handleQuantityChange(key, delta);
     }
-    handleQuantityChange(key, delta);
   }, [selectedItems, selectedSize, handleColorSelect, handleQuantityChange]);
 
   const firstImage = useMemo(() => {
