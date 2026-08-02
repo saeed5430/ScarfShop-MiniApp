@@ -34,7 +34,7 @@
 .home-welcome-section {
   position: relative;
   overflow: hidden;
-  padding: 36px 20px 28px;
+  padding: 40px 20px 32px;
 }
 
 .welcome-bg-shapes {
@@ -50,47 +50,47 @@
 }
 
 .shape-1 {
-  width: 180px;
-  height: 180px;
+  width: 350px;
+  height: 350px;
   background: var(--color-primary);
-  top: -40px;
-  right: -30px;
+  top: -80px;
+  right: -80px;
   animation: float1 8s ease-in-out infinite;
 }
 
 .shape-2 {
-  width: 120px;
-  height: 120px;
+  width: 280px;
+  height: 280px;
   background: var(--color-primary-light);
-  bottom: -20px;
-  left: -20px;
+  bottom: -60px;
+  left: -60px;
   animation: float2 10s ease-in-out infinite;
 }
 
 .shape-3 {
-  width: 60px;
-  height: 60px;
+  width: 200px;
+  height: 200px;
   background: var(--color-success);
-  top: 20px;
-  left: 30%;
+  top: 10%;
+  left: 5%;
   animation: float3 7s ease-in-out infinite;
 }
 
 .shape-4 {
-  width: 40px;
-  height: 40px;
+  width: 160px;
+  height: 160px;
   background: var(--color-primary);
-  bottom: 10px;
-  right: 25%;
+  bottom: 5%;
+  right: 5%;
   animation: float1 9s ease-in-out infinite reverse;
 }
 
 .shape-5 {
-  width: 90px;
-  height: 90px;
+  width: 220px;
+  height: 220px;
   background: var(--color-primary-light);
-  top: 50%;
-  left: 60%;
+  top: 40%;
+  left: 55%;
   animation: float2 11s ease-in-out infinite;
 }
 
@@ -328,11 +328,10 @@
   }
 }
 
-/* Logo Circle Section */
 .home-logo-circle-section {
   display: flex;
   justify-content: center;
-  padding: 8px 20px 12px;
+  padding: 0 20px 8px;
   animation: logoCircleIn 0.6s ease-out;
 }
 

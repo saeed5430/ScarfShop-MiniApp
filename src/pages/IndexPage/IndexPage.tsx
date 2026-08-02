@@ -31,19 +31,17 @@ export const IndexPage: FC = () => {
             <div className="shape shape-5" />
           </div>
           <div className="home-welcome-content">
+            <div className="home-logo-circle-section">
+              <div className="home-logo-circle" aria-label="لوگوی آرمانا">
+                <img
+                  src="https://ik.imagekit.io/xl73l8llh/products/logoo.jpg"
+                  alt="آرمانا"
+                  className="home-logo-circle-img"
+                />
+              </div>
+            </div>
             <h1 className="home-welcome-title">به فروشگاه آرمانا خوش آمدید</h1>
             <p className="home-welcome-sub">شال و روسری با کیفیت</p>
-          </div>
-        </div>
-
-         {/* Logo Circle */}
-        <div className="home-logo-circle-section">
-          <div className="home-logo-circle" aria-label="لوگوی آرمانا">
-            <img
-              src="https://ik.imagekit.io/xl73l8llh/products/logoo.jpg"
-              alt="آرمانا"
-              className="home-logo-circle-img"
-            />
           </div>
         </div>
 
