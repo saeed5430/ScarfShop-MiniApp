@@ -53,14 +53,8 @@ async function getChatIdByUsername(
   }
 }
 
-// Get admin usernames from database
-async function getAdminUsernames(db: D1Database): Promise<string[]> {
-  const database = new Database(db);
-  const admins = await database.admins.list();
-  return admins
-    .map((admin) => admin.username)
-    .filter((username): username is string => Boolean(username));
-}
+// Fixed list of admin usernames to notify
+const NOTIFY_ADMIN_USERNAMES = ['saeed54300', 'abdollahisz'];
 
 // Format order notification message
 function formatOrderMessage(
@@ -140,22 +134,14 @@ export async function sendOrderNotification(
     return { sent: 0, failed: 0 };
   }
 
-  // Get admin usernames
-  const adminUsernames = await getAdminUsernames(db);
-
-  if (adminUsernames.length === 0) {
-    console.log('No admins found to notify');
-    return { sent: 0, failed: 0 };
-  }
-
   // Format message
   const message = formatOrderMessage(orderId, customer, items);
 
   let sent = 0;
   let failed = 0;
 
-  // Send to all admins
-  for (const username of adminUsernames) {
+  // Send to specific admin usernames
+  for (const username of NOTIFY_ADMIN_USERNAMES) {
     const chatId = await getChatIdByUsername(botToken, username);
 
     if (chatId) {
