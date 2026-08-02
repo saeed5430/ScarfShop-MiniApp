@@ -36,6 +36,8 @@ export const Header: FC = () => {
           <span className="header-name">{customerName}!</span>
         </div>
       </div>
+
+      <div className="header-right" aria-hidden="true" />
     </header>
   );
 };
