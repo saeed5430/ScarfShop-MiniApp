@@ -275,3 +275,20 @@ export async function createCoupon(data: Partial<Coupon>): Promise<{ coupon: Cou
     body: JSON.stringify(data),
   });
 }
+
+// Settings
+export interface Setting {
+  id: number;
+  key: string;
+  value: string | null;
+  type: string;
+  label: string | null;
+}
+
+export async function getSettings(): Promise<{ settings: Setting[] }> {
+  return apiRequest('/api/settings');
+}
+
+export async function getSetting(key: string): Promise<{ setting: Setting | null }> {
+  return apiRequest(`/api/settings/${key}`);
+}

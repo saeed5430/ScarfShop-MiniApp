@@ -8,7 +8,7 @@ import './IndexPage.css';
 
 export const IndexPage: FC = () => {
   const navigate = useNavigate();
-  const { customer, isAdmin } = useAuth();
+  const { customer, loading } = useAuth();
 
   // Profile must have: phone, first_name, last_name (username comes from Telegram)
   const isProfileComplete = Boolean(
@@ -36,6 +36,43 @@ export const IndexPage: FC = () => {
           </div>
         </div>
 
+         {/* Logo Circle */}
+        <div className="home-logo-circle-section">
+          <div className="home-logo-circle" aria-label="لوگوی آرمانا">
+            <img
+              src="https://ik.imagekit.io/xl73l8llh/products/logoo.jpg"
+              alt="آرمانا"
+              className="home-logo-circle-img"
+            />
+          </div>
+        </div>
+
+        {/* Hint Notes - between welcome and action cards */}
+        <div className="home-hints-section">
+          <div className="home-hints">
+            <div className="hint-item">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 16v-4" />
+                <path d="M12 8h.01" />
+              </svg>
+              <p className="hint-text">
+                برای <span className="hint-highlight">سفارش آنلاین</span> ابتدا باید مشخصات خود را در قسمت <span className="hint-highlight">مشخصات مشتری</span> وارد کنید
+              </p>
+            </div>
+            <div className="hint-item">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 16v-4" />
+                <path d="M12 8h.01" />
+              </svg>
+              <p className="hint-text">
+                برای سفارش به قسمت <span className="hint-highlight">سفارش آنلاین</span> بروید
+              </p>
+            </div>
+          </div>
+        </div>
+
         <div className="home-content">
           <div className="home-actions">
             {/* Profile Card */}
@@ -47,7 +84,7 @@ export const IndexPage: FC = () => {
                 </svg>
               </div>
               <div className="action-content">
-                <h3 className="action-title">مشخصات کاربری</h3>
+                <h3 className="action-title">مشخصات مشتری</h3>
                 <p className="action-desc">
                   {isProfileComplete ? 'مشاهده و ویرایش اطلاعات' : 'تکمیل اطلاعات برای سفارش'}
                 </p>
@@ -58,7 +95,7 @@ export const IndexPage: FC = () => {
               </svg>
             </div>
 
-            {/* Quick Order Card */}
+            {/* Online Order Card */}
             <div
               className={`action-card ${!isProfileComplete ? 'action-card-disabled' : ''}`}
               onClick={() => {
@@ -77,9 +114,9 @@ export const IndexPage: FC = () => {
                 </svg>
               </div>
               <div className="action-content">
-                <h3 className="action-title">سفارش سریع</h3>
+                <h3 className="action-title">سفارش آنلاین</h3>
                 <p className="action-desc">
-                  {isProfileComplete ? 'مشاهده محصولات و ثبت سفارش' : 'ابتدا پروفایل خود را تکمیل کنید'}
+                  {isProfileComplete ? 'مشاهده محصولات و ثبت سفارش' : 'ابتدا مشخصات مشتری خود را تکمیل کنید'}
                 </p>
               </div>
               <svg className="action-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -87,8 +124,8 @@ export const IndexPage: FC = () => {
               </svg>
             </div>
 
-            {/* Admin Panel Card - only for admins */}
-            {isAdmin && (
+            {/* Admin Panel Card - only for @saeed54300 (Telegram ID: 6451725218) */}
+            {!loading && customer?.id === '6451725218' && (
               <div className="action-card" onClick={() => window.open('https://scarf-admin.pages.dev/login', '_blank')}>
                 <div className="action-icon action-icon-admin">
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
