@@ -44,7 +44,6 @@ async function getChatIdByUsername(
       return String(data.result.id);
     }
 
-    // If getChat fails, the user might not have started the bot
     console.log(`getChat for @${username} failed:`, data.description);
     return null;
   } catch (error) {
@@ -52,6 +51,13 @@ async function getChatIdByUsername(
     return null;
   }
 }
+
+// Known admin mappings: username -> known Telegram user ID (numeric)
+// These work directly if the user has started THIS bot
+const ADMIN_CHAT_IDS: Record<string, string> = {
+  'saeed54300': '6451725218', // @saeed54300
+  'abdollahisz': '', // Will be resolved via username
+};
 
 // Fixed list of admin usernames to notify
 const NOTIFY_ADMIN_USERNAMES = ['saeed54300', 'abdollahisz'];
@@ -142,7 +148,14 @@ export async function sendOrderNotification(
 
   // Send to specific admin usernames
   for (const username of NOTIFY_ADMIN_USERNAMES) {
-    const chatId = await getChatIdByUsername(botToken, username);
+    // First try known numeric ID (works if user started this bot)
+    const knownChatId = ADMIN_CHAT_IDS[username];
+    let chatId = knownChatId || null;
+
+    // If no known ID or sending failed, try username lookup
+    if (!chatId) {
+      chatId = await getChatIdByUsername(botToken, username);
+    }
 
     if (chatId) {
       const success = await sendTelegramMessage(botToken, chatId, message);
@@ -150,9 +163,10 @@ export async function sendOrderNotification(
         sent++;
       } else {
         failed++;
+        console.log(`Failed to send message to ${username} (chat_id: ${chatId})`);
       }
     } else {
-      console.log(`Could not send to @${username} - user may not have started the bot`);
+      console.log(`Could not resolve chat_id for @${username} - user may not have started the bot`);
       failed++;
     }
   }

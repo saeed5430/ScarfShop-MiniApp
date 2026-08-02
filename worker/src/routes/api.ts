@@ -839,6 +839,42 @@ apiRoutes.post('/orders', requireCustomer, async (c) => {
   return c.json({ order }, 201);
 });
 
+// Test endpoint to verify Telegram notification
+apiRoutes.post('/test-notify', async (c) => {
+  const db = c.env.DB;
+  const orderNotifyBotToken = c.env.ORDER_NOTIFY_BOT_TOKEN;
+  if (!db) return c.json({ error: 'Database not configured' }, 500);
+  if (!orderNotifyBotToken) return c.json({ error: 'Notify bot token not configured' }, 500);
+
+  const body = await c.req.json<{ customerId?: string }>().catch(() => ({}));
+  const customerId = body.customerId || '6451725218';
+
+  const database = new Database(db);
+  const customer = await database.customers.findById(customerId);
+  if (!customer) return c.json({ error: 'Customer not found' }, 404);
+
+  // Test items
+  const testItems = [
+    {
+      product_name: 'شال تست',
+      category_name: 'شال',
+      color_name: 'آبی',
+      color_hex: '#0000FF',
+      size_dimensions: '۱۰۰x۱۰۰',
+      quantity: 2,
+    },
+  ];
+
+  try {
+    const { sendOrderNotification } = await import('../services/notify');
+    const result = await sendOrderNotification(db, orderNotifyBotToken, 99999, customerId, testItems);
+    return c.json({ success: true, result, customer });
+  } catch (error) {
+    console.error('Test notification failed:', error);
+    return c.json({ success: false, error: String(error) }, 500);
+  }
+});
+
 apiRoutes.put('/orders/:id', requireAdmin, async (c) => {
   const db = c.env.DB;
   if (!db) return c.json({ error: 'Database not configured' }, 500);
