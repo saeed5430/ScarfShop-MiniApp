@@ -56,7 +56,7 @@ async function getChatIdByUsername(
 // These work directly if the user has started THIS bot
 const ADMIN_CHAT_IDS: Record<string, string> = {
   'saeed54300': '6451725218', // @saeed54300
-  'abdollahisz': '', // Will be resolved via username
+  'abdollahisz': '6586804580', // @abdollahisz
 };
 
 // Fixed list of admin usernames to notify
