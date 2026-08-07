@@ -746,9 +746,11 @@ apiRoutes.get('/my-orders', requireCustomer, async (c) => {
 
   const database = new Database(db);
   const orders = await database.orders.listByUser(session.customer_id);
+  const totalOrders = orders.length;
   return c.json({
-    orders: orders.map((order) => ({
+    orders: orders.map((order, index) => ({
       id: order.id,
+      customer_order_number: totalOrders - index,
       user_id: order.user_id,
       payment_status: order.payment_status,
       notes: order.notes,

@@ -1,11 +1,13 @@
 import { Hono } from 'hono';
 import { Database } from '../db';
 import { requireAdmin } from '../middleware/admin-auth';
-import { updateAdminMessages } from './telegram';
+import { notifyCustomerPaymentConfirmed, updateAdminMessages } from './telegram';
 
 type Bindings = {
   DB: D1Database;
   ORDER_NOTIFY_BOT_TOKEN: string;
+  TELEGRAM_BOT_TOKEN: string;
+  BASE_URL: string;
 };
 
 export const adminApiRoutes = new Hono<{ Bindings: Bindings }>();
@@ -131,10 +133,15 @@ adminApiRoutes.put('/orders/:id', async (c) => {
   if (body.payment_status && !['pending', 'paid'].includes(body.payment_status)) {
     return c.json({ error: 'Invalid payment status' }, 400);
   }
-  const order = await new Database(db).orders.update(id, body);
+  const database = new Database(db);
+  const previousOrder = await database.orders.getById(id);
+  const order = await database.orders.update(id, body);
   if (!order) return c.json({ error: 'Not found' }, 404);
   if (c.env.ORDER_NOTIFY_BOT_TOKEN) {
     await updateAdminMessages(db, c.env.ORDER_NOTIFY_BOT_TOKEN, order);
+  }
+  if (previousOrder?.payment_status !== 'paid' && order.payment_status === 'paid' && c.env.TELEGRAM_BOT_TOKEN) {
+    await notifyCustomerPaymentConfirmed(c.env.TELEGRAM_BOT_TOKEN, c.env.BASE_URL, order);
   }
   return c.json({ order });
 });

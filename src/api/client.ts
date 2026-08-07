@@ -215,6 +215,7 @@ export interface Order {
   created_at: string;
   updated_at: string;
   item_count?: number;
+  customer_order_number?: number;
   receipt_file_type?: 'photo' | 'voice' | null;
   receipt_uploaded_at?: number | null;
   invoice_uploaded_at?: number | null;

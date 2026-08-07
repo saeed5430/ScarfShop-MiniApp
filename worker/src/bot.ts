@@ -30,7 +30,7 @@ export function buildMiniAppButton(url: string) {
     inline_keyboard: [
       [
         {
-          text: '🛍️ ورود به فروشگاه آرمانا',
+          text: 'باز کنید',
           web_app: { url },
         },
       ],

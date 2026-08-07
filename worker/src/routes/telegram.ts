@@ -1,6 +1,6 @@
 import type { D1Database } from '@cloudflare/workers-types';
 import { Hono } from 'hono';
-import { handleHelp, handleStart, handleUnknown } from '../bot';
+import { buildMiniAppButton, handleHelp, handleStart, handleUnknown } from '../bot';
 import { Database } from '../db';
 import type { Order } from '../db';
 import { formatOrderMessage, orderActionKeyboard } from '../services/notify';
@@ -77,6 +77,19 @@ export async function updateAdminMessages(db: D1Database, token: string, order: 
   ));
 }
 
+export async function notifyCustomerPaymentConfirmed(
+  miniAppBotToken: string,
+  baseUrl: string,
+  order: Order
+): Promise<void> {
+  await sendMessage(
+    miniAppBotToken,
+    Number(order.user_id),
+    `✅ پرداخت سفارش #${order.id} با موفقیت تایید شد.`,
+    buildMiniAppButton(baseUrl)
+  );
+}
+
 async function deliverReceiptToCustomer(
   orderBotToken: string,
   miniAppBotToken: string,
@@ -105,11 +118,13 @@ async function deliverReceiptToCustomer(
   const sendResult = await sendResponse.json<{ ok?: boolean }>();
   if (!sendResult.ok) return false;
 
-  await sendMessage(
-    miniAppBotToken,
-    Number(order.user_id),
-    'لطفاً پس از پرداخت، تصویر فیش واریزی را برای @abdollahisz ارسال کنید.'
-  );
+  if (type === 'photo') {
+    await sendMessage(
+      miniAppBotToken,
+      Number(order.user_id),
+      'لطفاً تصویر فیش واریزی را برای @abdollahisz ارسال کنید.'
+    );
+  }
   return true;
 }
 
@@ -158,6 +173,8 @@ async function handleAdminUpload(
 async function handleOrderCallback(
   db: D1Database,
   token: string,
+  miniAppBotToken: string,
+  baseUrl: string,
   callbackQuery: NonNullable<TelegramUpdate['callback_query']>
 ): Promise<void> {
   if (!ADMIN_IDS.has(String(callbackQuery.from.id))) {
@@ -179,10 +196,14 @@ async function handleOrderCallback(
   }
 
   if (action === 'toggle-payment') {
+    const isConfirming = order.payment_status !== 'paid';
     const updated = await database.orders.update(orderId, {
-      payment_status: order.payment_status === 'paid' ? 'pending' : 'paid',
+      payment_status: isConfirming ? 'paid' : 'pending',
     });
     if (updated) await updateAdminMessages(db, token, updated);
+    if (updated && isConfirming) {
+      await notifyCustomerPaymentConfirmed(miniAppBotToken, baseUrl, updated);
+    }
     await answerCallbackQuery(token, callbackQuery.id, updated?.payment_status === 'paid'
       ? 'پرداخت تایید شد.'
       : 'پرداخت به حالت پرداخت‌نشده برگشت.');
@@ -217,7 +238,7 @@ async function handleTelegramUpdate(
   miniAppBotToken: string
 ): Promise<void> {
   if (update.callback_query) {
-    if (allowOrderActions) await handleOrderCallback(db, token, update.callback_query);
+    if (allowOrderActions) await handleOrderCallback(db, token, miniAppBotToken, baseUrl, update.callback_query);
     else await answerCallbackQuery(token, update.callback_query.id, 'این دکمه برای ربات سفارش است.');
     return;
   }
@@ -265,7 +286,7 @@ telegramRoutes.get('/setup', async (c) => {
       body: JSON.stringify({
         menu_button: {
           type: 'web_app',
-          text: '🛍️ ورود به آرمانا',
+          text: 'باز کنید',
           web_app: { url: c.env.BASE_URL },
         },
       }),

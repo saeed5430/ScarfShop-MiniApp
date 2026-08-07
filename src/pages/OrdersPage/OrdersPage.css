@@ -27,9 +27,18 @@
   background: var(--color-surface, #fff);
 }
 
-.order-item div {
+.order-item-info,
+.order-item-actions {
   display: grid;
   gap: 6px;
+}
+
+.order-item-info small {
+  color: var(--color-text-secondary, #6b7280);
+}
+
+.order-item-actions {
+  justify-items: end;
 }
 
 .order-item span {
@@ -46,4 +55,21 @@
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
+}
+
+.order-item button:disabled {
+  color: var(--color-text-secondary, #9ca3af);
+  cursor: default;
+  opacity: 0.75;
+}
+
+@media (max-width: 420px) {
+  .order-item {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .order-item-actions {
+    justify-items: start;
+  }
 }
