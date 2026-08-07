@@ -215,6 +215,28 @@ export interface Order {
   created_at: string;
   updated_at: string;
   item_count?: number;
+  receipt_file_type?: 'photo' | 'voice' | null;
+  receipt_uploaded_at?: number | null;
+  invoice_uploaded_at?: number | null;
+  voice_uploaded_at?: number | null;
+}
+
+export async function getMyOrders(): Promise<{ orders: Order[] }> {
+  return apiRequest('/api/my-orders');
+}
+
+export function getOrderReceiptUrl(orderId: number, type: 'invoice' | 'voice' = 'invoice'): string {
+  const baseUrl = import.meta.env.VITE_API_URL || '';
+  return `${baseUrl}/api/my-orders/${orderId}/receipt?type=${type}`;
+}
+
+export async function getOrderReceipt(orderId: number, type: 'invoice' | 'voice'): Promise<string> {
+  const token = localStorage.getItem('session_token');
+  const response = await fetch(getOrderReceiptUrl(orderId, type), {
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  });
+  if (!response.ok) throw new Error('Receipt unavailable');
+  return URL.createObjectURL(await response.blob());
 }
 
 export interface OrderItem {

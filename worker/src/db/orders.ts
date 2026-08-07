@@ -15,6 +15,15 @@ export class OrdersDB {
       user_id: String(row.user_id),
       payment_status: row.payment_status as 'pending' | 'paid',
       notes: row.notes != null ? String(row.notes) : null,
+      receipt_file_id: row.receipt_file_id != null ? String(row.receipt_file_id) : null,
+      receipt_file_type: row.receipt_file_type != null ? row.receipt_file_type as 'photo' | 'voice' : null,
+      receipt_uploaded_at: row.receipt_uploaded_at != null ? Number(row.receipt_uploaded_at) : null,
+      telegram_chat_id: row.telegram_chat_id != null ? String(row.telegram_chat_id) : null,
+      telegram_order_message_id: row.telegram_order_message_id != null ? Number(row.telegram_order_message_id) : null,
+      invoice_file_id: row.invoice_file_id != null ? String(row.invoice_file_id) : null,
+      invoice_uploaded_at: row.invoice_uploaded_at != null ? Number(row.invoice_uploaded_at) : null,
+      voice_file_id: row.voice_file_id != null ? String(row.voice_file_id) : null,
+      voice_uploaded_at: row.voice_uploaded_at != null ? Number(row.voice_uploaded_at) : null,
       created_at: String(row.created_at),
       updated_at: String(row.updated_at),
     };
@@ -81,5 +90,24 @@ export class OrdersDB {
   async delete(id: number): Promise<boolean> {
     const result = await this.db.prepare('DELETE FROM orders WHERE id = ?').bind(id).run();
     return (result.meta.changes ?? 0) > 0;
+  }
+
+  async saveReceipt(id: number, type: 'photo' | 'voice', fileId: string): Promise<Order | null> {
+    const now = Math.floor(Date.now() / 1000);
+    const field = type === 'photo' ? 'invoice_file_id' : 'voice_file_id';
+    const uploadedField = type === 'photo' ? 'invoice_uploaded_at' : 'voice_uploaded_at';
+    await this.db.prepare(`
+      UPDATE orders
+      SET receipt_file_id = ?, receipt_file_type = ?, receipt_uploaded_at = ?,
+          ${field} = ?, ${uploadedField} = ?, updated_at = ?
+      WHERE id = ?
+    `).bind(fileId, type, now, fileId, now, now, id).run();
+    return this.getById(id);
+  }
+
+  async saveTelegramMessage(id: number, chatId: string, messageId: number): Promise<void> {
+    await this.db.prepare(`
+      UPDATE orders SET telegram_chat_id = ?, telegram_order_message_id = ? WHERE id = ?
+    `).bind(chatId, messageId, id).run();
   }
 }

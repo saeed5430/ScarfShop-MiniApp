@@ -50,6 +50,8 @@ export const OrderList: React.FC = () => {
           { key: "user_id", title: "مشتری", dataIndex: "user_id" },
           { key: "item_count", title: "اقلام", dataIndex: "item_count", width: 80, render: (v: number) => <span style={{ fontWeight: 600, color: "#7C3AED" }}>{v ?? 0}</span> },
           { key: "payment_status", title: "پرداخت", dataIndex: "payment_status", render: (v: string) => <Tag color={paymentColors[v]}>{paymentLabels[v]}</Tag> },
+          { key: "invoice_uploaded_at", title: "فاکتور", dataIndex: "invoice_uploaded_at", render: (v: number | null) => <Tag color={v ? "green" : "default"}>{v ? "دارد" : "ندارد"}</Tag> },
+          { key: "voice_uploaded_at", title: "صوت", dataIndex: "voice_uploaded_at", render: (v: number | null) => <Tag color={v ? "blue" : "default"}>{v ? "دارد" : "ندارد"}</Tag> },
           { key: "created_at", title: "تاریخ", dataIndex: "created_at", render: (v: string) => <PersianDate value={v} /> },
         ]}
         actions={{

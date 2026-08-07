@@ -5,8 +5,9 @@ import { Database } from '../db';
 async function sendTelegramMessage(
   botToken: string,
   chatId: string,
-  message: string
-): Promise<boolean> {
+  message: string,
+  replyMarkup?: object
+): Promise<{ success: boolean; messageId: number | null }> {
   try {
     const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
     const response = await fetch(url, {
@@ -16,18 +17,34 @@ async function sendTelegramMessage(
         chat_id: chatId,
         text: message,
         parse_mode: 'HTML',
+        reply_markup: replyMarkup,
       }),
     });
 
-    const data: { ok?: boolean; description?: string } = await response.json();
+    const data: { ok?: boolean; result?: { message_id?: number }; description?: string } = await response.json();
     if (!data.ok) {
       console.error('Telegram sendMessage failed:', data.description);
     }
-    return data.ok === true;
+    return { success: data.ok === true, messageId: data.result?.message_id ?? null };
   } catch (error) {
     console.error('Failed to send Telegram message:', error);
-    return false;
+    return { success: false, messageId: null };
   }
+}
+
+export function orderActionKeyboard(orderId: number, paymentStatus: 'pending' | 'paid', invoiceUploaded: boolean, voiceUploaded: boolean) {
+  return {
+    inline_keyboard: [
+      [
+        { text: invoiceUploaded ? '📷 تغییر فاکتور' : '📷 ارسال فاکتور', callback_data: `order:invoice:${orderId}` },
+        { text: voiceUploaded ? '🎤 تغییر صدا' : '🎤 ارسال صدا', callback_data: `order:voice:${orderId}` },
+      ],
+      [{
+        text: paymentStatus === 'paid' ? '✖️ لغو تایید پرداخت' : '✅ تایید پرداخت',
+        callback_data: `order:toggle-payment:${orderId}`,
+      }],
+    ],
+  };
 }
 
 // Get chat_id by username
@@ -63,7 +80,7 @@ const ADMIN_CHAT_IDS: Record<string, string> = {
 const NOTIFY_ADMIN_USERNAMES = ['saeed54300', 'abdollahisz'];
 
 // Format order notification message
-function formatOrderMessage(
+export function formatOrderMessage(
   orderId: number,
   customer: {
     id: string;
@@ -80,7 +97,12 @@ function formatOrderMessage(
     color_hex: string | null;
     size_dimensions: string | null;
     quantity: number;
-  }>
+  }>,
+  status: {
+    payment: 'pending' | 'paid';
+    invoiceUploaded: boolean;
+    voiceUploaded: boolean;
+  } = { payment: 'pending', invoiceUploaded: false, voiceUploaded: false }
 ): string {
   let message = `🛍️ <b>سفارش جدید #${orderId}</b>\n\n`;
 
@@ -111,6 +133,9 @@ function formatOrderMessage(
     message += `   تعداد: ${item.quantity}\n`;
   });
 
+  message += `\n💳 پرداخت: ${status.payment === 'paid' ? '✅ پرداخت شده' : '❌ پرداخت نشده'}\n`;
+  message += `🧾 فاکتور: ${status.invoiceUploaded ? '✅ تصویر دریافت شد' : '❌ ثبت نشده'}\n`;
+  message += `🎤 صدا: ${status.voiceUploaded ? '✅ فایل صوتی دریافت شد' : '❌ ثبت نشده'}\n`;
   message += `\n⏰ ${new Date().toLocaleString('fa-IR', { timeZone: 'Asia/Tehran' })}`;
 
   return message;
@@ -142,6 +167,7 @@ export async function sendOrderNotification(
 
   // Format message
   const message = formatOrderMessage(orderId, customer, items);
+  const replyMarkup = orderActionKeyboard(orderId, 'pending', false, false);
 
   let sent = 0;
   let failed = 0;
@@ -158,9 +184,15 @@ export async function sendOrderNotification(
     }
 
     if (chatId) {
-      const success = await sendTelegramMessage(botToken, chatId, message);
-      if (success) {
+      const result = await sendTelegramMessage(botToken, chatId, message, replyMarkup);
+      if (result.success) {
         sent++;
+        if (result.messageId !== null) {
+          await database.orderTelegram.addMessage(orderId, chatId, result.messageId);
+          if (username === NOTIFY_ADMIN_USERNAMES[0]) {
+            await database.orders.saveTelegramMessage(orderId, chatId, result.messageId);
+          }
+        }
       } else {
         failed++;
         console.log(`Failed to send message to ${username} (chat_id: ${chatId})`);

@@ -12,6 +12,7 @@ import { OrdersDB } from './orders';
 import { OrderItemsDB } from './order-items';
 import { CouponsDB } from './coupons';
 import { SettingsDB } from './settings';
+import { OrderTelegramDB } from './order-telegram';
 
 export class Database {
   public customers: CustomersDB;
@@ -27,6 +28,7 @@ export class Database {
   public orderItems: OrderItemsDB;
   public coupons: CouponsDB;
   public settings: SettingsDB;
+  public orderTelegram: OrderTelegramDB;
 
   constructor(db: D1Database) {
     this.customers = new CustomersDB(db);
@@ -42,6 +44,7 @@ export class Database {
     this.orderItems = new OrderItemsDB(db);
     this.coupons = new CouponsDB(db);
     this.settings = new SettingsDB(db);
+    this.orderTelegram = new OrderTelegramDB(db);
   }
 }
 

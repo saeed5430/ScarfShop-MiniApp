@@ -9,6 +9,7 @@ import { ChatPage } from '@/pages/ChatPage/ChatPage';
 import { QuickBuyPage } from '@/pages/QuickBuyPage/QuickBuyPage.tsx';
 import { ProfilePage } from '@/pages/ProfilePage/ProfilePage';
 import { AdminPanelPage } from '@/pages/AdminPanelPage/AdminPanelPage';
+import { OrdersPage } from '@/pages/OrdersPage/OrdersPage';
 
 interface Route {
   path: string;
@@ -22,6 +23,7 @@ export const routes: Route[] = [
   { path: '/chat', Component: ChatPage, title: 'چت با هوش مصنوعی' },
   { path: '/quick-buy', Component: QuickBuyPage, title: 'سفارش سریع' },
   { path: '/profile', Component: ProfilePage, title: 'پروفایل' },
+  { path: '/orders', Component: OrdersPage, title: 'سفارش‌های من' },
   { path: '/admin-panel', Component: AdminPanelPage, title: 'پنل ادمین' },
   { path: '/init-data', Component: InitDataPage, title: 'Init Data' },
   { path: '/theme-params', Component: ThemeParamsPage, title: 'Theme Params' },

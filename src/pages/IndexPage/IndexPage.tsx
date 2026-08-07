@@ -122,6 +122,22 @@ export const IndexPage: FC = () => {
               </svg>
             </div>
 
+            <div className="action-card" onClick={() => navigate('/orders')}>
+              <div className="action-icon action-icon-profile">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M6 2h12v20H6z" />
+                  <path d="M9 6h6M9 10h6M9 14h4" />
+                </svg>
+              </div>
+              <div className="action-content">
+                <h3 className="action-title">پیگیری سفارش‌ها</h3>
+                <p className="action-desc">مشاهده وضعیت پرداخت و فیش</p>
+              </div>
+              <svg className="action-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="15 18 9 12 15 6" />
+              </svg>
+            </div>
+
             {/* Admin Panel Card - only for @saeed54300 (Telegram ID: 6451725218) */}
             {!loading && customer?.id === '6451725218' && (
               <div className="action-card" onClick={() => window.open('https://scarf-admin.pages.dev/login', '_blank')}>

@@ -737,6 +737,61 @@ apiRoutes.get('/orders', async (c) => {
   return c.json({ orders: enriched, total });
 });
 
+apiRoutes.get('/my-orders', requireCustomer, async (c) => {
+  const db = c.env.DB;
+  if (!db) return c.json({ error: 'Database not configured' }, 500);
+  const token = c.req.header('Authorization')?.replace('Bearer ', '') || '';
+  const session = await validateSession(db, token);
+  if (!session.valid || !session.customer_id) return c.json({ error: 'Token required' }, 401);
+
+  const database = new Database(db);
+  const orders = await database.orders.listByUser(session.customer_id);
+  return c.json({
+    orders: orders.map((order) => ({
+      id: order.id,
+      user_id: order.user_id,
+      payment_status: order.payment_status,
+      notes: order.notes,
+      receipt_file_type: order.receipt_file_type,
+      receipt_uploaded_at: order.receipt_uploaded_at,
+      invoice_uploaded_at: order.invoice_uploaded_at,
+      voice_uploaded_at: order.voice_uploaded_at,
+      created_at: order.created_at,
+      updated_at: order.updated_at,
+    })),
+  });
+});
+
+apiRoutes.get('/my-orders/:id/receipt', requireCustomer, async (c) => {
+  const db = c.env.DB;
+  const botToken = c.env.ORDER_NOTIFY_BOT_TOKEN;
+  if (!db) return c.json({ error: 'Database not configured' }, 500);
+  if (!botToken) return c.json({ error: 'Receipt service not configured' }, 500);
+
+  const token = c.req.header('Authorization')?.replace('Bearer ', '') || '';
+  const session = await validateSession(db, token);
+  if (!session.valid || !session.customer_id) return c.json({ error: 'Token required' }, 401);
+  const order = await new Database(db).orders.getById(Number(c.req.param('id')));
+  if (!order || order.user_id !== session.customer_id) return c.json({ error: 'Not found' }, 404);
+
+  const requestedType = c.req.query('type');
+  const fileType = requestedType === 'voice' ? 'voice' : requestedType === 'invoice' ? 'photo' : order.receipt_file_type;
+  const fileId = fileType === 'voice' ? order.voice_file_id : order.invoice_file_id;
+  if (!fileId) return c.json({ error: 'Receipt not uploaded' }, 404);
+  const fileResponse = await fetch(`https://api.telegram.org/bot${botToken}/getFile?file_id=${encodeURIComponent(fileId)}`);
+  const fileData = await fileResponse.json<{ ok?: boolean; result?: { file_path?: string } }>();
+  if (!fileData.ok || !fileData.result?.file_path) return c.json({ error: 'Receipt unavailable' }, 404);
+
+  const mediaResponse = await fetch(`https://api.telegram.org/file/bot${botToken}/${fileData.result.file_path}`);
+  if (!mediaResponse.ok || !mediaResponse.body) return c.json({ error: 'Receipt unavailable' }, 404);
+  return new Response(mediaResponse.body, {
+    headers: {
+      'Content-Type': mediaResponse.headers.get('Content-Type') || (fileType === 'voice' ? 'audio/ogg' : 'image/jpeg'),
+      'Cache-Control': 'private, max-age=300',
+    },
+  });
+});
+
 apiRoutes.get('/orders/:id', async (c) => {
   const db = c.env.DB;
   if (!db) return c.json({ error: 'Database not configured' }, 500);
@@ -837,42 +892,6 @@ apiRoutes.post('/orders', requireCustomer, async (c) => {
   }
 
   return c.json({ order }, 201);
-});
-
-// Test endpoint to verify Telegram notification
-apiRoutes.post('/test-notify', async (c) => {
-  const db = c.env.DB;
-  const orderNotifyBotToken = c.env.ORDER_NOTIFY_BOT_TOKEN;
-  if (!db) return c.json({ error: 'Database not configured' }, 500);
-  if (!orderNotifyBotToken) return c.json({ error: 'Notify bot token not configured' }, 500);
-
-  const body = await c.req.json<{ customerId?: string }>().catch(() => ({}));
-  const customerId = body.customerId || '6451725218';
-
-  const database = new Database(db);
-  const customer = await database.customers.findById(customerId);
-  if (!customer) return c.json({ error: 'Customer not found' }, 404);
-
-  // Test items
-  const testItems = [
-    {
-      product_name: 'شال تست',
-      category_name: 'شال',
-      color_name: 'آبی',
-      color_hex: '#0000FF',
-      size_dimensions: '۱۰۰x۱۰۰',
-      quantity: 2,
-    },
-  ];
-
-  try {
-    const { sendOrderNotification } = await import('../services/notify');
-    const result = await sendOrderNotification(db, orderNotifyBotToken, 99999, customerId, testItems);
-    return c.json({ success: true, result, customer });
-  } catch (error) {
-    console.error('Test notification failed:', error);
-    return c.json({ success: false, error: String(error) }, 500);
-  }
 });
 
 apiRoutes.put('/orders/:id', requireAdmin, async (c) => {

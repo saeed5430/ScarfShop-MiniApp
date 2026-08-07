@@ -213,6 +213,15 @@ export interface Order {
   user_id: string;
   payment_status: 'pending' | 'paid';
   notes: string | null;
+  receipt_file_id: string | null;
+  receipt_file_type: 'photo' | 'voice' | null;
+  receipt_uploaded_at: number | null;
+  telegram_chat_id: string | null;
+  telegram_order_message_id: number | null;
+  invoice_file_id: string | null;
+  invoice_uploaded_at: number | null;
+  voice_file_id: string | null;
+  voice_uploaded_at: number | null;
   created_at: string;
   updated_at: string;
 }

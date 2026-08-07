@@ -1,4 +1,4 @@
-import { type TelegramUpdate, sendMessage } from './types';
+import { sendMessage } from './types';
 
 export function getMiniAppUrl(baseUrl: string): string {
   return baseUrl;
@@ -8,7 +8,7 @@ export function buildStartMessage(firstName: string): string {
   return [
     `سلام ${firstName}! 👋`,
     '',
-    'به scarf-mini-app خوش اومدی.',
+    'به فروشگاه آرمانا خوش آمدید.',
     '',
     'از دکمه زیر برای باز کردن اپ استفاده کن:',
   ].join('\n');
@@ -30,7 +30,7 @@ export function buildMiniAppButton(url: string) {
     inline_keyboard: [
       [
         {
-          text: '🔗 باز کردن اپ',
+          text: '🛍️ ورود به فروشگاه آرمانا',
           web_app: { url },
         },
       ],
