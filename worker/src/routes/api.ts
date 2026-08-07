@@ -747,12 +747,28 @@ apiRoutes.get('/my-orders', requireCustomer, async (c) => {
   const database = new Database(db);
   const orders = await database.orders.listByUser(session.customer_id);
   const totalOrders = orders.length;
-  return c.json({
-    orders: orders.map((order, index) => ({
+
+  const enriched = await Promise.all(orders.map(async (order, index) => {
+    const rawItems = await database.orderItems.listByOrder(order.id);
+    const items = await Promise.all(rawItems.map(async (item) => {
+      const product = item.product_id ? await db.prepare('SELECT id, name FROM products WHERE id = ?').bind(item.product_id).first() : null;
+      const color = item.color_id ? await db.prepare('SELECT id, name, hex FROM colors WHERE id = ?').bind(item.color_id).first() : null;
+      const size = item.size_id ? await db.prepare('SELECT id, dimensions FROM sizes WHERE id = ?').bind(item.size_id).first() : null;
+
+      return {
+        product_id: item.product_id,
+        product_name: product?.name ?? null,
+        color_name: color?.name ?? null,
+        color_hex: color?.hex ?? null,
+        size_dimensions: size?.dimensions ?? null,
+        quantity: item.quantity,
+      };
+    }));
+
+    return {
       id: order.id,
       customer_order_number: totalOrders - index,
       user_id: order.user_id,
-      payment_status: order.payment_status,
       notes: order.notes,
       receipt_file_type: order.receipt_file_type,
       receipt_uploaded_at: order.receipt_uploaded_at,
@@ -760,8 +776,11 @@ apiRoutes.get('/my-orders', requireCustomer, async (c) => {
       voice_uploaded_at: order.voice_uploaded_at,
       created_at: order.created_at,
       updated_at: order.updated_at,
-    })),
-  });
+      items,
+    };
+  }));
+
+  return c.json({ orders: enriched });
 });
 
 apiRoutes.get('/my-orders/:id/receipt', requireCustomer, async (c) => {

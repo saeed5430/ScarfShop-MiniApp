@@ -210,7 +210,6 @@ export async function setVariantSizes(variantId: number, sizeIds: number[]): Pro
 export interface Order {
   id: number;
   user_id: string;
-  payment_status: 'pending' | 'paid';
   notes: string | null;
   created_at: string;
   updated_at: string;
@@ -220,6 +219,16 @@ export interface Order {
   receipt_uploaded_at?: number | null;
   invoice_uploaded_at?: number | null;
   voice_uploaded_at?: number | null;
+  items?: OrderItemDetail[];
+}
+
+export interface OrderItemDetail {
+  product_id: number;
+  product_name: string | null;
+  color_name: string | null;
+  color_hex: string | null;
+  size_dimensions: string | null;
+  quantity: number;
 }
 
 export async function getMyOrders(): Promise<{ orders: Order[] }> {
