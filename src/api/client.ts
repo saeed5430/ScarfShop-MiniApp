@@ -207,9 +207,18 @@ export async function setVariantSizes(variantId: number, sizeIds: number[]): Pro
 
 // Orders
 
+export type DeliveryMethod = 'in_person' | 'tipax' | 'carrier';
+
+export const DELIVERY_LABELS: Record<DeliveryMethod, string> = {
+  in_person: 'تحویل حضوری',
+  tipax: 'ارسال با تیپاکس',
+  carrier: 'ارسال با باربری',
+};
+
 export interface Order {
   id: number;
   user_id: string;
+  delivery_method: DeliveryMethod | null;
   notes: string | null;
   created_at: string;
   updated_at: string;
@@ -266,7 +275,7 @@ export async function getOrder(id: number): Promise<{ order: Order; items: Order
   return apiRequest(`/api/orders/${id}`);
 }
 
-export async function createOrder(data: { user_id: string; notes?: string; items: { product_id: number; color_id?: number; size_id?: number; quantity: number }[] }): Promise<{ order: Order }> {
+export async function createOrder(data: { user_id: string; delivery_method?: DeliveryMethod | null; notes?: string; items: { product_id: number; color_id?: number; size_id?: number; quantity: number }[] }): Promise<{ order: Order }> {
   return apiRequest('/api/orders', {
     method: 'POST',
     body: JSON.stringify(data),

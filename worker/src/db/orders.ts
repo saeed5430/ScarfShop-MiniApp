@@ -14,6 +14,7 @@ export class OrdersDB {
       id: Number(row.id),
       user_id: String(row.user_id),
       payment_status: row.payment_status as 'pending' | 'paid',
+      delivery_method: row.delivery_method != null ? String(row.delivery_method) as 'in_person' | 'tipax' | 'carrier' : null,
       notes: row.notes != null ? String(row.notes) : null,
       receipt_file_id: row.receipt_file_id != null ? String(row.receipt_file_id) : null,
       receipt_file_type: row.receipt_file_type != null ? row.receipt_file_type as 'photo' | 'voice' : null,
@@ -32,11 +33,12 @@ export class OrdersDB {
   async create(input: CreateOrderInput): Promise<Order> {
     const now = nowJalali();
     const result = await this.db.prepare(`
-      INSERT INTO orders (user_id, payment_status, notes, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?)
+      INSERT INTO orders (user_id, payment_status, delivery_method, notes, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?)
     `).bind(
       input.user_id,
       input.payment_status ?? 'pending',
+      input.delivery_method ?? null,
       input.notes ?? null,
       now,
       now,
@@ -74,6 +76,7 @@ export class OrdersDB {
     const values: unknown[] = [];
 
     if (input.payment_status !== undefined) { fields.push('payment_status = ?'); values.push(input.payment_status); }
+    if (input.delivery_method !== undefined) { fields.push('delivery_method = ?'); values.push(input.delivery_method); }
     if (input.notes !== undefined) { fields.push('notes = ?'); values.push(input.notes); }
 
     if (fields.length === 0) return this.getById(id);

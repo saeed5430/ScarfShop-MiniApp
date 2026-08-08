@@ -48,6 +48,16 @@
   font-size: 12px;
 }
 
+.order-delivery {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-primary, #7c3aed);
+  background: color-mix(in srgb, var(--color-primary, #7c3aed) 10%, transparent);
+  align-self: start;
+  padding: 6px 12px;
+  border-radius: 12px;
+}
+
 .order-items {
   display: grid;
   gap: 8px;

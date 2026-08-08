@@ -35,6 +35,6 @@ try {
         </StrictMode>,
       );
     });
-} catch (e) {
+} catch (_e) {
   root.render(<EnvUnsupported/>);
 }

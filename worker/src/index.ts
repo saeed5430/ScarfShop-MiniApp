@@ -3,6 +3,7 @@ import { cors } from 'hono/cors';
 import { apiRoutes } from './routes/api';
 import { adminAuthRoutes } from './routes/admin-auth';
 import { adminApiRoutes } from './routes/admin-api';
+import { adminTelegramRoutes } from './routes/admin-telegram';
 import { authRoutes } from './routes/auth';
 import { uploadRoutes } from './routes/upload-image';
 import { telegramRoutes } from './routes/telegram';
@@ -20,6 +21,8 @@ type Bindings = {
   IMAGEKIT_URL_ENDPOINT: string;
   JWT_SECRET: string;
   ORDER_NOTIFY_BOT_TOKEN: string;
+  TELEGRAM_USER_SERVICE_URL: string;
+  TELEGRAM_USER_SERVICE_TOKEN: string;
 };
 
 const app = new Hono<{ Bindings: Bindings }>();
@@ -56,6 +59,7 @@ app.route('/api/setup', setupRoutes);
 // Admin-protected routes (JWT required for ALL operations)
 app.use('/api/admin/*', requireAdmin);
 app.route('/api/admin', adminApiRoutes);
+app.route('/api/admin', adminTelegramRoutes);
 
 // Admin-protected upload routes
 app.use('/api/upload/*', requireAdmin);

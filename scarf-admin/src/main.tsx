@@ -25,6 +25,7 @@ import { UserList } from "./pages/users";
 import { AdminList, AdminCreate, AdminEdit } from "./pages/admins";
 import { OrderList, OrderShow } from "./pages/orders";
 import { SettingsPage } from "./pages/settings";
+import { TelegramPage } from "./pages/telegram";
 
 const Authenticated: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isLoading } = useAuthenticated();
@@ -51,6 +52,7 @@ function App() {
               { name: "users", list: "/users", meta: { label: "کاربران" } },
               { name: "admins", list: "/admins", create: "/admins/create", edit: "/admins/edit/:id", meta: { label: "ادمین‌ها" } },
               { name: "orders", list: "/orders", show: "/orders/show/:id", meta: { label: "سفارشات" } },
+              { name: "telegram", list: "/telegram", meta: { label: "ارسال شخصی" } },
               { name: "settings", list: "/settings", meta: { label: "تنظیمات" } },
             ]}
             options={{
@@ -81,6 +83,7 @@ function App() {
                 <Route path="/users"><Route index element={<UserList />} /></Route>
                 <Route path="/admins"><Route index element={<AdminList />} /><Route path="create" element={<AdminCreate />} /><Route path="edit/:id" element={<AdminEdit />} /></Route>
                 <Route path="/orders"><Route index element={<OrderList />} /><Route path="show/:id" element={<OrderShow />} /></Route>
+                <Route path="/telegram"><Route index element={<TelegramPage />} /></Route>
                 <Route path="/settings"><Route index element={<SettingsPage />} /></Route>
               </Route>
               <Route path="*" element={<ErrorComponent />} />

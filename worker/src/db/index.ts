@@ -13,6 +13,7 @@ import { OrderItemsDB } from './order-items';
 import { CouponsDB } from './coupons';
 import { SettingsDB } from './settings';
 import { OrderTelegramDB } from './order-telegram';
+import { TelegramAccountsDB } from './telegram-accounts';
 
 export class Database {
   public customers: CustomersDB;
@@ -29,6 +30,7 @@ export class Database {
   public coupons: CouponsDB;
   public settings: SettingsDB;
   public orderTelegram: OrderTelegramDB;
+  public telegramAccounts: TelegramAccountsDB;
 
   constructor(db: D1Database) {
     this.customers = new CustomersDB(db);
@@ -45,6 +47,7 @@ export class Database {
     this.coupons = new CouponsDB(db);
     this.settings = new SettingsDB(db);
     this.orderTelegram = new OrderTelegramDB(db);
+    this.telegramAccounts = new TelegramAccountsDB(db);
   }
 }
 
@@ -59,4 +62,6 @@ export type {
   OrderItem, CreateOrderItemInput,
   Coupon, CreateCouponInput, UpdateCouponInput,
   Setting, UpdateSettingInput,
+  DeliveryMethod,
+  AdminTelegramAccount, UpdateTelegramAccountInput, TelegramAccountStatus,
 } from './types';

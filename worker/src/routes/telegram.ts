@@ -5,6 +5,12 @@ import { Database } from '../db';
 import type { Order } from '../db';
 import { formatOrderMessage, orderActionKeyboard } from '../services/notify';
 import {
+  isPersonalReady,
+  sendReceiptViaPersonal,
+  sendTextViaPersonal,
+  type PersonalDeliveryEnv,
+} from '../services/personal-delivery';
+import {
   answerCallbackQuery,
   editMessageText,
   sendMessage,
@@ -18,6 +24,8 @@ type Bindings = {
   ORDER_NOTIFY_BOT_TOKEN: string;
   BASE_URL: string;
   DB: D1Database;
+  TELEGRAM_USER_SERVICE_URL?: string;
+  TELEGRAM_USER_SERVICE_TOKEN?: string;
 };
 
 type EnrichedOrderItem = {
@@ -64,7 +72,7 @@ export async function updateAdminMessages(db: D1Database, token: string, order: 
     payment: order.payment_status,
     invoiceUploaded: Boolean(order.invoice_file_id),
     voiceUploaded: Boolean(order.voice_file_id),
-  });
+  }, order.delivery_method);
   const keyboard = orderActionKeyboard(
     order.id,
     order.payment_status,
@@ -80,12 +88,17 @@ export async function updateAdminMessages(db: D1Database, token: string, order: 
 export async function notifyCustomerPaymentConfirmed(
   miniAppBotToken: string,
   baseUrl: string,
-  order: Order
+  order: Order,
+  personal?: { env: PersonalDeliveryEnv; adminId: string }
 ): Promise<void> {
+  const text = `✅ پرداخت سفارش #${order.id} با موفقیت تایید شد.`;
+  if (personal && await sendTextViaPersonal(personal.env, personal.adminId, order, text)) {
+    return;
+  }
   await sendMessage(
     miniAppBotToken,
     Number(order.user_id),
-    `✅ پرداخت سفارش #${order.id} با موفقیت تایید شد.`,
+    text,
     buildMiniAppButton(baseUrl)
   );
 }
@@ -95,11 +108,15 @@ async function deliverReceiptToCustomer(
   miniAppBotToken: string,
   order: Order,
   type: 'photo' | 'voice',
-  fileId: string
+  fileId: string,
+  personal?: { env: PersonalDeliveryEnv; adminId: string }
 ): Promise<boolean> {
   const caption = type === 'photo'
     ? `🧾 فاکتور سفارش #${order.id}`
     : `🎙️ توضیحات سفارش #${order.id}`;
+  if (personal && await sendReceiptViaPersonal(personal.env, personal.adminId, order, type, fileId, orderBotToken)) {
+    return true;
+  }
   const fileResponse = await fetch(`https://api.telegram.org/bot${orderBotToken}/getFile?file_id=${encodeURIComponent(fileId)}`);
   const fileData = await fileResponse.json<{ ok?: boolean; result?: { file_path?: string } }>();
   if (!fileData.ok || !fileData.result?.file_path) return false;
@@ -132,7 +149,8 @@ async function handleAdminUpload(
   db: D1Database,
   orderBotToken: string,
   miniAppBotToken: string,
-  update: TelegramUpdate
+  update: TelegramUpdate,
+  env: PersonalDeliveryEnv
 ): Promise<boolean> {
   const message = update.message;
   if (!message || !ADMIN_IDS.has(String(message.from.id))) return false;
@@ -158,15 +176,24 @@ async function handleAdminUpload(
     return true;
   }
 
-  const delivered = await deliverReceiptToCustomer(orderBotToken, miniAppBotToken, order, type, fileId);
+  const personal = { env, adminId: String(message.from.id) };
+  const personalReady = await isPersonalReady(db, personal.adminId);
+  const delivered = await deliverReceiptToCustomer(orderBotToken, miniAppBotToken, order, type, fileId, personal);
   await updateAdminMessages(db, orderBotToken, order);
-  await sendMessage(
-    orderBotToken,
-    message.chat.id,
-    delivered
-      ? '✅ فایل دریافت شد و ربات مینی‌اپ آن را برای خریدار ارسال کرد.'
-      : '⚠️ فایل ذخیره شد، اما ارسال با ربات مینی‌اپ ناموفق بود. خریدار باید ابتدا ربات مینی‌اپ را Start کند.'
-  );
+  const note = personalReady
+    ? 'از حساب شخصی شما'
+    : delivered
+      ? 'با ربات مینی‌اپ'
+      : '';
+  if (note) {
+    await sendMessage(
+      orderBotToken,
+      message.chat.id,
+      delivered
+        ? `✅ فایل دریافت شد و ${note} برای خریدار ارسال شد.`
+        : `⚠️ فایل ذخیره شد، اما ارسال ناموفق بود (${personalReady ? 'حساب شخصی' : 'ربات مینی‌اپ'}). خریدار باید ابتدا ربات مینی‌اپ را Start کند.`
+    );
+  }
   return true;
 }
 
@@ -175,7 +202,8 @@ async function handleOrderCallback(
   token: string,
   miniAppBotToken: string,
   baseUrl: string,
-  callbackQuery: NonNullable<TelegramUpdate['callback_query']>
+  callbackQuery: NonNullable<TelegramUpdate['callback_query']>,
+  env: PersonalDeliveryEnv
 ): Promise<void> {
   if (!ADMIN_IDS.has(String(callbackQuery.from.id))) {
     await answerCallbackQuery(token, callbackQuery.id, 'دسترسی غیرمجاز است.');
@@ -202,7 +230,12 @@ async function handleOrderCallback(
     });
     if (updated) await updateAdminMessages(db, token, updated);
     if (updated && isConfirming) {
-      await notifyCustomerPaymentConfirmed(miniAppBotToken, baseUrl, updated);
+      await notifyCustomerPaymentConfirmed(
+        miniAppBotToken,
+        baseUrl,
+        updated,
+        { env, adminId: String(callbackQuery.from.id) }
+      );
     }
     await answerCallbackQuery(token, callbackQuery.id, updated?.payment_status === 'paid'
       ? 'پرداخت تایید شد.'
@@ -235,14 +268,15 @@ async function handleTelegramUpdate(
   baseUrl: string,
   update: TelegramUpdate,
   allowOrderActions: boolean,
-  miniAppBotToken: string
+  miniAppBotToken: string,
+  env: PersonalDeliveryEnv
 ): Promise<void> {
   if (update.callback_query) {
-    if (allowOrderActions) await handleOrderCallback(db, token, miniAppBotToken, baseUrl, update.callback_query);
+    if (allowOrderActions) await handleOrderCallback(db, token, miniAppBotToken, baseUrl, update.callback_query, env);
     else await answerCallbackQuery(token, update.callback_query.id, 'این دکمه برای ربات سفارش است.');
     return;
   }
-  if (allowOrderActions && await handleAdminUpload(db, token, miniAppBotToken, update)) return;
+  if (allowOrderActions && await handleAdminUpload(db, token, miniAppBotToken, update, env)) return;
   if (!update.message?.text) return;
   const { id: chatId } = update.message.chat;
   const { text } = update.message;
@@ -254,14 +288,14 @@ async function handleTelegramUpdate(
 
 telegramRoutes.post('/webhook', async (c) => {
   if (!c.env.TELEGRAM_BOT_TOKEN) return c.json({ error: 'TELEGRAM_BOT_TOKEN not set' }, 500);
-  await handleTelegramUpdate(c.env.DB, c.env.TELEGRAM_BOT_TOKEN, c.env.BASE_URL, await c.req.json(), false, c.env.TELEGRAM_BOT_TOKEN);
+  await handleTelegramUpdate(c.env.DB, c.env.TELEGRAM_BOT_TOKEN, c.env.BASE_URL, await c.req.json(), false, c.env.TELEGRAM_BOT_TOKEN, c.env);
   return c.json({ ok: true });
 });
 
 telegramRoutes.post('/order-webhook', async (c) => {
   if (!c.env.ORDER_NOTIFY_BOT_TOKEN) return c.json({ error: 'ORDER_NOTIFY_BOT_TOKEN not set' }, 500);
   if (!c.env.TELEGRAM_BOT_TOKEN) return c.json({ error: 'TELEGRAM_BOT_TOKEN not set' }, 500);
-  await handleTelegramUpdate(c.env.DB, c.env.ORDER_NOTIFY_BOT_TOKEN, c.env.BASE_URL, await c.req.json(), true, c.env.TELEGRAM_BOT_TOKEN);
+  await handleTelegramUpdate(c.env.DB, c.env.ORDER_NOTIFY_BOT_TOKEN, c.env.BASE_URL, await c.req.json(), true, c.env.TELEGRAM_BOT_TOKEN, c.env);
   return c.json({ ok: true });
 });
 

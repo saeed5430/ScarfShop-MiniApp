@@ -1,5 +1,5 @@
 import { type FC, useEffect, useState } from 'react';
-import { getOrderReceipt, type Order } from '@/api/client.ts';
+import { getOrderReceipt, DELIVERY_LABELS, type Order } from '@/api/client.ts';
 
 type MediaState = {
   url: string | null;
@@ -34,6 +34,12 @@ export const OrderCard: FC<{ order: Order }> = ({ order }) => {
         <strong>خرید شماره {order.customer_order_number ?? order.id}</strong>
         <span className="order-code">کد سفارش #{order.id}</span>
       </div>
+
+      {order.delivery_method && (
+        <div className="order-delivery">
+          📦 {DELIVERY_LABELS[order.delivery_method] ?? order.delivery_method}
+        </div>
+      )}
 
       {order.items && order.items.length > 0 && (
         <ul className="order-items">

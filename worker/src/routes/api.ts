@@ -769,6 +769,7 @@ apiRoutes.get('/my-orders', requireCustomer, async (c) => {
       id: order.id,
       customer_order_number: totalOrders - index,
       user_id: order.user_id,
+      delivery_method: order.delivery_method,
       notes: order.notes,
       receipt_file_type: order.receipt_file_type,
       receipt_uploaded_at: order.receipt_uploaded_at,
@@ -856,10 +857,17 @@ apiRoutes.post('/orders', requireCustomer, async (c) => {
   const body = await c.req.json();
   const database = new Database(db);
 
+  // Validate delivery method if provided
+  const deliveryMethod = body.delivery_method ?? null;
+  if (deliveryMethod !== null && !['in_person', 'tipax', 'carrier'].includes(deliveryMethod)) {
+    return c.json({ error: 'روش تحویل نامعتبر است' }, 400);
+  }
+
   // Ensure user can only create orders for themselves
   const orderData = {
     ...body,
     user_id: customerId,
+    delivery_method: deliveryMethod,
   };
 
   const order = await database.orders.create(orderData);
@@ -905,7 +913,7 @@ apiRoutes.post('/orders', requireCustomer, async (c) => {
   if (orderNotifyBotToken) {
     try {
       const { sendOrderNotification } = await import('../services/notify');
-      const result = await sendOrderNotification(db, orderNotifyBotToken, order.id, customerId, orderItems);
+      const result = await sendOrderNotification(db, orderNotifyBotToken, order.id, customerId, orderItems, order.delivery_method);
       console.log(`Order ${order.id} notification: sent=${result.sent}, failed=${result.failed}`);
     } catch (error) {
       console.error('Failed to send order notification:', error);

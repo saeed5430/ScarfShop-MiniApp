@@ -29,12 +29,19 @@ interface OrderDetail {
   id: number;
   user_id: string;
   payment_status: string;
+  delivery_method: string | null;
   notes: string | null;
   created_at: string;
   updated_at: string;
   invoice_uploaded_at: number | null;
   voice_uploaded_at: number | null;
 }
+
+const deliveryLabels: Record<string, string> = {
+  in_person: "🏪 تحویل حضوری",
+  tipax: "🚚 ارسال با تیپاکس",
+  carrier: "🚛 ارسال با باربری",
+};
 
 export const OrderShow: React.FC = () => {
   const { id } = useParams();
@@ -208,6 +215,13 @@ export const OrderShow: React.FC = () => {
         </Descriptions.Item>
         <Descriptions.Item label={<Title level={5} style={{ margin: 0 }}>تعداد اقلام</Title>}>
           <span style={{ fontWeight: 600, color: "#7C3AED" }}>{items.length} ردیف</span>
+        </Descriptions.Item>
+        <Descriptions.Item label={<Title level={5} style={{ margin: 0 }}>نحوه تحویل</Title>}>
+          {order?.delivery_method ? (
+            <Tag color="purple">{deliveryLabels[order.delivery_method] ?? order.delivery_method}</Tag>
+          ) : (
+            <Tag>ثبت نشده</Tag>
+          )}
         </Descriptions.Item>
         <Descriptions.Item label={<Title level={5} style={{ margin: 0 }}>یادداشت</Title>} span={2}>
           <TextField value={order?.notes || "—"} />

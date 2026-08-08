@@ -13,12 +13,13 @@ export async function runMigrations(db: D1Database): Promise<void> {
     `CREATE TABLE IF NOT EXISTS sizes (id INTEGER PRIMARY KEY AUTOINCREMENT, dimensions TEXT NOT NULL, created_at INTEGER DEFAULT (unixepoch()), updated_at INTEGER DEFAULT (unixepoch()))`,
     `CREATE TABLE IF NOT EXISTS product_colors (product_id INTEGER NOT NULL, color_id INTEGER NOT NULL, PRIMARY KEY (product_id, color_id), FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE, FOREIGN KEY (color_id) REFERENCES colors(id) ON DELETE CASCADE)`,
     `CREATE TABLE IF NOT EXISTS product_sizes (product_id INTEGER NOT NULL, size_id INTEGER NOT NULL, PRIMARY KEY (product_id, size_id), FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE, FOREIGN KEY (size_id) REFERENCES sizes(id) ON DELETE CASCADE)`,
-    `CREATE TABLE IF NOT EXISTS orders (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT NOT NULL, payment_status TEXT NOT NULL DEFAULT 'pending' CHECK(payment_status IN ('pending', 'paid')), notes TEXT, created_at INTEGER DEFAULT (unixepoch()), updated_at INTEGER DEFAULT (unixepoch()))`,
+    `CREATE TABLE IF NOT EXISTS orders (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT NOT NULL, payment_status TEXT NOT NULL DEFAULT 'pending' CHECK(payment_status IN ('pending', 'paid')), delivery_method TEXT, notes TEXT, created_at INTEGER DEFAULT (unixepoch()), updated_at INTEGER DEFAULT (unixepoch()))`,
     `CREATE TABLE IF NOT EXISTS order_items (id INTEGER PRIMARY KEY AUTOINCREMENT, order_id INTEGER NOT NULL, product_id INTEGER NOT NULL, color_id INTEGER, size_id INTEGER, quantity INTEGER NOT NULL DEFAULT 1, FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE, FOREIGN KEY (product_id) REFERENCES products(id), FOREIGN KEY (color_id) REFERENCES colors(id), FOREIGN KEY (size_id) REFERENCES sizes(id))`,
     `CREATE TABLE IF NOT EXISTS order_telegram_messages (order_id INTEGER NOT NULL, telegram_chat_id TEXT NOT NULL, telegram_message_id INTEGER NOT NULL, created_at INTEGER NOT NULL DEFAULT (unixepoch()), PRIMARY KEY (order_id, telegram_chat_id), FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE)`,
     `CREATE TABLE IF NOT EXISTS telegram_order_waiting (telegram_user_id TEXT PRIMARY KEY, order_id INTEGER NOT NULL, waiting_action TEXT NOT NULL CHECK(waiting_action IN ('invoice_photo', 'voice')), expires_at INTEGER NOT NULL, FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE)`,
     `CREATE TABLE IF NOT EXISTS coupons (id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT UNIQUE NOT NULL, discount INTEGER NOT NULL DEFAULT 0, type TEXT NOT NULL DEFAULT 'percentage' CHECK(type IN ('percentage', 'fixed')), expires_at INTEGER, is_active INTEGER DEFAULT 1, created_at INTEGER DEFAULT (unixepoch()), updated_at INTEGER DEFAULT (unixepoch()))`,
     `CREATE TABLE IF NOT EXISTS settings (id INTEGER PRIMARY KEY AUTOINCREMENT, key TEXT UNIQUE NOT NULL, value TEXT, type TEXT DEFAULT 'text' CHECK(type IN ('text', 'image', 'boolean', 'json')), label TEXT NOT NULL, created_at INTEGER DEFAULT (unixepoch()), updated_at INTEGER DEFAULT (unixepoch()))`,
+    `CREATE TABLE IF NOT EXISTS admin_telegram_accounts (admin_id TEXT PRIMARY KEY, username TEXT, telegram_user_id TEXT, telegram_phone_masked TEXT, status TEXT NOT NULL DEFAULT 'not_connected' CHECK(status IN ('not_connected', 'connected', 'error', 'revoked', 'disabled')), personal_sending_enabled INTEGER NOT NULL DEFAULT 0, session_ref TEXT, last_connected_at INTEGER, last_verified_at INTEGER, last_error TEXT, created_at INTEGER DEFAULT (unixepoch()), updated_at INTEGER DEFAULT (unixepoch()))`,
     `CREATE INDEX IF NOT EXISTS idx_sessions_customer_id ON sessions(customer_id)`,
     `CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON sessions(expires_at)`,
     `CREATE INDEX IF NOT EXISTS idx_chats_customer_id ON chats(customer_id)`,
@@ -35,6 +36,8 @@ export async function runMigrations(db: D1Database): Promise<void> {
     `CREATE INDEX IF NOT EXISTS idx_order_telegram_messages_order ON order_telegram_messages(order_id)`,
     `CREATE INDEX IF NOT EXISTS idx_telegram_order_waiting_expires ON telegram_order_waiting(expires_at)`,
     `CREATE INDEX IF NOT EXISTS idx_coupons_code ON coupons(code)`,
+    `CREATE INDEX IF NOT EXISTS idx_admin_telegram_accounts_status ON admin_telegram_accounts(status)`,
+    `CREATE INDEX IF NOT EXISTS idx_admin_telegram_accounts_enabled ON admin_telegram_accounts(personal_sending_enabled)`,
     `INSERT OR IGNORE INTO admins (id, username, email, first_name, created_at, updated_at) VALUES ('admin_saeed54300', 'saeed54300', 'admin@armana.ir', 'سعید', unixepoch(), unixepoch())`,
     `INSERT OR IGNORE INTO customers (id, user_type, first_name, last_name, username, language_code, is_premium, created_at, last_active) VALUES ('demo_123456789', 'regular', 'سعید', 'احمدی', 'saeed54300', 'fa', 0, unixepoch(), unixepoch())`,
   ];
@@ -46,6 +49,7 @@ export async function runMigrations(db: D1Database): Promise<void> {
   const { results: orderColumns } = await db.prepare('PRAGMA table_info(orders)').all<{ name: string }>();
   const existingColumns = new Set(orderColumns.map((column) => column.name));
   const missingColumns: Array<[string, string]> = [
+    ['delivery_method', 'TEXT'],
     ['receipt_file_id', 'TEXT'],
     ['receipt_file_type', 'TEXT'],
     ['receipt_uploaded_at', 'INTEGER'],

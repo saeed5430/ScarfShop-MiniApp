@@ -8,9 +8,11 @@ import {
   getProductColors,
   getProductSizes,
   createOrder,
+  DELIVERY_LABELS,
   type Category,
   type Product,
   type Color,
+  type DeliveryMethod,
   type Size,
 } from '@/api/client.ts';
 import { FilterBar } from './FilterBar.tsx';
@@ -40,6 +42,7 @@ export const QuickBuyPage: FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedItems, setSelectedItems] = useState<Map<string, SelectedItem>>(new Map());
+  const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>('in_person');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
@@ -158,11 +161,13 @@ export const QuickBuyPage: FC = () => {
 
       await createOrder({
         user_id: customer.id,
+        delivery_method: deliveryMethod,
         items,
       });
 
       setSubmitSuccess(true);
       setSelectedItems(new Map());
+      setDeliveryMethod('in_person');
 
       setTimeout(() => {
         navigate('/');
@@ -171,7 +176,7 @@ export const QuickBuyPage: FC = () => {
       console.error('Order submission failed:', err);
       setSubmitting(false);
     }
-  }, [customer, submitting, selectedItems, navigate]);
+  }, [customer, submitting, selectedItems, deliveryMethod, navigate]);
 
   return (
     <Page back={true}>
@@ -270,6 +275,22 @@ export const QuickBuyPage: FC = () => {
                 ))}
               </div>
             ))}
+
+            <div className="quickbuy-delivery">
+              <div className="quickbuy-delivery-title">نحوه تحویل سفارش</div>
+              <div className="quickbuy-delivery-options">
+                {(Object.keys(DELIVERY_LABELS) as DeliveryMethod[]).map((method) => (
+                  <button
+                    type="button"
+                    key={method}
+                    className={`quickbuy-delivery-option ${deliveryMethod === method ? 'active' : ''}`}
+                    onClick={() => setDeliveryMethod(method)}
+                  >
+                    {DELIVERY_LABELS[method]}
+                  </button>
+                ))}
+              </div>
+            </div>
 
             <button
               className="quickbuy-submit-btn"

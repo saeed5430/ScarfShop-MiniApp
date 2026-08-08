@@ -208,10 +208,13 @@ export interface ProductSize {
 
 // Orders
 
+export type DeliveryMethod = 'in_person' | 'tipax' | 'carrier';
+
 export interface Order {
   id: number;
   user_id: string;
   payment_status: 'pending' | 'paid';
+  delivery_method: DeliveryMethod | null;
   notes: string | null;
   receipt_file_id: string | null;
   receipt_file_type: 'photo' | 'voice' | null;
@@ -229,11 +232,13 @@ export interface Order {
 export interface CreateOrderInput {
   user_id: string;
   payment_status?: 'pending' | 'paid';
+  delivery_method?: DeliveryMethod | null;
   notes?: string;
 }
 
 export interface UpdateOrderInput {
   payment_status?: 'pending' | 'paid';
+  delivery_method?: DeliveryMethod | null;
   notes?: string;
 }
 
@@ -299,4 +304,40 @@ export interface Setting {
 
 export interface UpdateSettingInput {
   value: string;
+}
+
+// Admin Telegram personal accounts (sessions live in telegram-user-service)
+
+export type TelegramAccountStatus =
+  | 'not_connected'
+  | 'connected'
+  | 'error'
+  | 'revoked'
+  | 'disabled';
+
+export interface AdminTelegramAccount {
+  admin_id: string;
+  username: string | null;
+  telegram_user_id: string | null;
+  telegram_phone_masked: string | null;
+  status: TelegramAccountStatus;
+  personal_sending_enabled: boolean;
+  session_ref: string | null;
+  last_connected_at: string | null;
+  last_verified_at: string | null;
+  last_error: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UpdateTelegramAccountInput {
+  username?: string | null;
+  telegram_user_id?: string | null;
+  telegram_phone_masked?: string | null;
+  status?: TelegramAccountStatus;
+  personal_sending_enabled?: boolean;
+  session_ref?: string | null;
+  last_connected_at?: string | null;
+  last_verified_at?: string | null;
+  last_error?: string | null;
 }

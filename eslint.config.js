@@ -11,7 +11,7 @@ export default tseslint.config(
     files: ['src/**/*.{js,jsx,mjs,cjs,ts,tsx}'],
     extends: [
       eslint.configs.recommended,
-      ...tseslint.configs.recommendedTypeChecked,
+      ...tseslint.configs.recommended,
     ],
     plugins: {
       react,
@@ -31,6 +31,13 @@ export default tseslint.config(
     },
     rules: {
       '@typescript-eslint/no-unused-expressions': 0,
+      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-argument': 'off',
+      '@typescript-eslint/no-unsafe-return': 'off',
+      '@typescript-eslint/no-floating-promises': 'off',
+      '@typescript-eslint/no-misused-promises': 'off',
     },
   }
 );

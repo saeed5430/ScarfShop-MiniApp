@@ -1,5 +1,13 @@
 import type { D1Database } from '@cloudflare/workers-types';
 import { Database } from '../db';
+import type { DeliveryMethod } from '../db';
+
+// Known delivery method labels
+const DELIVERY_LABELS: Record<DeliveryMethod, string> = {
+  in_person: '🏪 تحویل حضوری',
+  tipax: '🚚 ارسال با تیپاکس',
+  carrier: '🚛 ارسال با باربری',
+};
 
 // Send message to Telegram user by chat_id
 async function sendTelegramMessage(
@@ -102,7 +110,8 @@ export function formatOrderMessage(
     payment: 'pending' | 'paid';
     invoiceUploaded: boolean;
     voiceUploaded: boolean;
-  } = { payment: 'pending', invoiceUploaded: false, voiceUploaded: false }
+  } = { payment: 'pending', invoiceUploaded: false, voiceUploaded: false },
+  deliveryMethod: DeliveryMethod | null = null
 ): string {
   let message = `🛍️ <b>سفارش جدید #${orderId}</b>\n\n`;
 
@@ -117,7 +126,12 @@ export function formatOrderMessage(
   if (customer.address) {
     message += `├ آدرس: ${customer.address}\n`;
   }
-  message += `\n`;
+  message += `\n\n`;
+
+  // Delivery method
+  if (deliveryMethod) {
+    message += `📦 <b>نحوه تحویل:</b> ${DELIVERY_LABELS[deliveryMethod] ?? deliveryMethod}\n\n`;
+  }
 
   // Order items
   message += `📦 <b>اقلام سفارش:</b>\n`;
@@ -154,7 +168,8 @@ export async function sendOrderNotification(
     color_hex: string | null;
     size_dimensions: string | null;
     quantity: number;
-  }>
+  }>,
+  deliveryMethod: DeliveryMethod | null = null
 ): Promise<{ sent: number; failed: number }> {
   const database = new Database(db);
 
@@ -166,7 +181,7 @@ export async function sendOrderNotification(
   }
 
   // Format message
-  const message = formatOrderMessage(orderId, customer, items);
+  const message = formatOrderMessage(orderId, customer, items, undefined, deliveryMethod);
   const replyMarkup = orderActionKeyboard(orderId, 'pending', false, false);
 
   let sent = 0;
