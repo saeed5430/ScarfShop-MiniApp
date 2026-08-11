@@ -341,3 +341,16 @@ export interface UpdateTelegramAccountInput {
   last_verified_at?: string | null;
   last_error?: string | null;
 }
+
+// Telegram message deletion queue (for 24-hour auto-deletion)
+
+export interface TelegramDeletionQueueItem {
+  id: number;
+  telegram_chat_id: string;
+  telegram_message_id: number;
+  order_id: number;
+  message_type: 'invoice' | 'voice' | 'order_notification';
+  delete_at: number;
+  deleted_at: number | null;
+  created_at: number;
+}

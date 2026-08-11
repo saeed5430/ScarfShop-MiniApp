@@ -113,6 +113,10 @@
   border-radius: 999px;
   font-size: 13px;
   font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .order-receipt-status.ok {
@@ -123,6 +127,13 @@
 .order-receipt-status.missing {
   color: var(--color-text-secondary, #6b7280);
   background: rgba(107, 114, 128, 0.12);
+}
+
+.order-timestamp {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--color-text-secondary, #6b7280);
+  white-space: nowrap;
 }
 
 .order-media {

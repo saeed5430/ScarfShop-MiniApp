@@ -14,6 +14,7 @@ import { CouponsDB } from './coupons';
 import { SettingsDB } from './settings';
 import { OrderTelegramDB } from './order-telegram';
 import { TelegramAccountsDB } from './telegram-accounts';
+import { TelegramDeletionQueueDB } from './telegram-deletion-queue';
 
 export class Database {
   public customers: CustomersDB;
@@ -31,6 +32,7 @@ export class Database {
   public settings: SettingsDB;
   public orderTelegram: OrderTelegramDB;
   public telegramAccounts: TelegramAccountsDB;
+  public telegramDeletionQueue: TelegramDeletionQueueDB;
 
   constructor(db: D1Database) {
     this.customers = new CustomersDB(db);
@@ -48,6 +50,7 @@ export class Database {
     this.settings = new SettingsDB(db);
     this.orderTelegram = new OrderTelegramDB(db);
     this.telegramAccounts = new TelegramAccountsDB(db);
+    this.telegramDeletionQueue = new TelegramDeletionQueueDB(db);
   }
 }
 
@@ -64,4 +67,5 @@ export type {
   Setting, UpdateSettingInput,
   DeliveryMethod,
   AdminTelegramAccount, UpdateTelegramAccountInput, TelegramAccountStatus,
+  TelegramDeletionQueueItem,
 } from './types';

@@ -10,7 +10,7 @@ const DELIVERY_LABELS: Record<DeliveryMethod, string> = {
 };
 
 // Send message to Telegram user by chat_id
-async function sendTelegramMessage(
+export async function sendTelegramMessage(
   botToken: string,
   chatId: string,
   message: string,
@@ -40,6 +40,29 @@ async function sendTelegramMessage(
   }
 }
 
+// Send message and queue for 24-hour auto-deletion
+export async function sendTelegramMessageWithDeletion(
+  db: D1Database,
+  botToken: string,
+  chatId: string,
+  message: string,
+  orderId: number,
+  messageType: 'invoice' | 'voice' | 'order_notification',
+  replyMarkup?: object
+): Promise<{ success: boolean; messageId: number | null }> {
+  const result = await sendTelegramMessage(botToken, chatId, message, replyMarkup);
+  if (result.success && result.messageId !== null) {
+    try {
+      const { Database } = await import('../db');
+      const database = new Database(db);
+      await database.telegramDeletionQueue.add(chatId, result.messageId, orderId, messageType);
+    } catch (e) {
+      console.error('Failed to queue message for deletion:', e);
+    }
+  }
+  return result;
+}
+
 export function orderActionKeyboard(orderId: number, paymentStatus: 'pending' | 'paid', invoiceUploaded: boolean, voiceUploaded: boolean) {
   return {
     inline_keyboard: [
@@ -47,10 +70,6 @@ export function orderActionKeyboard(orderId: number, paymentStatus: 'pending' | 
         { text: invoiceUploaded ? '📷 تغییر فاکتور' : '📷 ارسال فاکتور', callback_data: `order:invoice:${orderId}` },
         { text: voiceUploaded ? '🎤 تغییر صدا' : '🎤 ارسال صدا', callback_data: `order:voice:${orderId}` },
       ],
-      [{
-        text: paymentStatus === 'paid' ? '✖️ لغو تایید پرداخت' : '✅ تایید پرداخت',
-        callback_data: `order:toggle-payment:${orderId}`,
-      }],
     ],
   };
 }
@@ -199,7 +218,7 @@ export async function sendOrderNotification(
     }
 
     if (chatId) {
-      const result = await sendTelegramMessage(botToken, chatId, message, replyMarkup);
+      const result = await sendTelegramMessageWithDeletion(db, botToken, chatId, message, orderId, 'order_notification', replyMarkup);
       if (result.success) {
         sent++;
         if (result.messageId !== null) {

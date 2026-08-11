@@ -1,3 +1,4 @@
+import { resolveAssetUrl } from '@/helpers/publicUrl';
 import { type FC, useMemo, useCallback } from 'react';
 import type { ProductWithRelations, SelectedItem } from './QuickBuyPage.tsx';
 import type { Size } from '@/api/client.ts';
@@ -43,8 +44,8 @@ export const ProductCard: FC<ProductCardProps> = ({
   const firstImage = useMemo(() => {
     const img = product.images?.[0];
     if (!img) return null;
-    if (typeof img === 'string') return img;
-    if (typeof img === 'object' && 'url' in img) return (img as { url: string }).url;
+    if (typeof img === 'string') return resolveAssetUrl(img);
+    if (typeof img === 'object' && 'url' in img) return resolveAssetUrl((img as { url: string }).url);
     return null;
   }, [product.images]);
 
@@ -87,7 +88,7 @@ export const ProductCard: FC<ProductCardProps> = ({
       <div className="product-card-header">
         <h3 className="product-card-name">{displayName}</h3>
         {selectedSize && (
-          <span className="product-card-size-badge">{selectedSize.dimensions}</span>
+          <span className="product-card-size-badge">سایز {selectedSize.dimensions}</span>
         )}
       </div>
 

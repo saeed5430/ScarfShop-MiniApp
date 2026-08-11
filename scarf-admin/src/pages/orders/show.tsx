@@ -49,7 +49,6 @@ export const OrderShow: React.FC = () => {
   const [order, setOrder] = useState<OrderDetail | null>(null);
   const [items, setItems] = useState<OrderItemDetail[]>([]);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
 
   const getHeaders = () => {
     const token = localStorage.getItem("admin_token");
@@ -78,26 +77,6 @@ export const OrderShow: React.FC = () => {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [id]);
-
-  const togglePayment = async () => {
-    if (!order) return;
-    setSaving(true);
-    try {
-      const response = await fetch(`${API_URL}/api/admin/orders/${order.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", ...getHeaders() },
-        body: JSON.stringify({ payment_status: order.payment_status === "paid" ? "pending" : "paid" }),
-      });
-      if (!response.ok) throw new Error("Request failed");
-      const data = await response.json();
-      setOrder(data.order);
-      message.success(data.order.payment_status === "paid" ? "پرداخت تایید شد" : "تایید پرداخت لغو شد");
-    } catch {
-      message.error("خطا در تغییر وضعیت پرداخت");
-    } finally {
-      setSaving(false);
-    }
-  };
 
   const openReceipt = async (type: "invoice" | "voice") => {
     if (!order) return;
@@ -169,7 +148,7 @@ export const OrderShow: React.FC = () => {
       dataIndex: "size_dimensions",
       key: "size_dimensions",
       width: 100,
-      render: (v: string | null) => v || "-",
+      render: (v: string | null) => v ? `سایز ${v}` : "-",
     },
     {
       title: "تعداد",
@@ -204,14 +183,9 @@ export const OrderShow: React.FC = () => {
           <TextField value={String(order?.user_id ?? "")} />
         </Descriptions.Item>
         <Descriptions.Item label={<Title level={5} style={{ margin: 0 }}>وضعیت پرداخت</Title>}>
-          <Space>
-            <Tag color={paymentColors[order?.payment_status ?? "pending"]}>
-              {paymentLabels[order?.payment_status ?? "pending"] ?? order?.payment_status}
-            </Tag>
-            <Button size="small" loading={saving} danger={order?.payment_status === "paid"} onClick={togglePayment}>
-              {order?.payment_status === "paid" ? "لغو تایید پرداخت" : "تایید پرداخت"}
-            </Button>
-          </Space>
+          <Tag color={paymentColors[order?.payment_status ?? "pending"]}>
+            {paymentLabels[order?.payment_status ?? "pending"] ?? order?.payment_status}
+          </Tag>
         </Descriptions.Item>
         <Descriptions.Item label={<Title level={5} style={{ margin: 0 }}>تعداد اقلام</Title>}>
           <span style={{ fontWeight: 600, color: "#7C3AED" }}>{items.length} ردیف</span>

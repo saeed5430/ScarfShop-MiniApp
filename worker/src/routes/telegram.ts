@@ -12,6 +12,7 @@ import {
 } from '../services/personal-delivery';
 import {
   answerCallbackQuery,
+  deleteMessage,
   editMessageText,
   sendMessage,
   sendPhoto,
@@ -23,6 +24,7 @@ type Bindings = {
   TELEGRAM_BOT_TOKEN: string;
   ORDER_NOTIFY_BOT_TOKEN: string;
   BASE_URL: string;
+  MINI_APP_URL?: string;
   DB: D1Database;
   TELEGRAM_USER_SERVICE_URL?: string;
   TELEGRAM_USER_SERVICE_TOKEN?: string;
@@ -83,24 +85,6 @@ export async function updateAdminMessages(db: D1Database, token: string, order: 
   await Promise.all(messages.map(({ telegram_chat_id, telegram_message_id }) =>
     editMessageText(token, Number(telegram_chat_id), telegram_message_id, text, keyboard)
   ));
-}
-
-export async function notifyCustomerPaymentConfirmed(
-  miniAppBotToken: string,
-  baseUrl: string,
-  order: Order,
-  personal?: { env: PersonalDeliveryEnv; adminId: string }
-): Promise<void> {
-  const text = `✅ پرداخت سفارش #${order.id} با موفقیت تایید شد.`;
-  if (personal && await sendTextViaPersonal(personal.env, personal.adminId, order, text)) {
-    return;
-  }
-  await sendMessage(
-    miniAppBotToken,
-    Number(order.user_id),
-    text,
-    buildMiniAppButton(baseUrl)
-  );
 }
 
 async function deliverReceiptToCustomer(
@@ -186,13 +170,22 @@ async function handleAdminUpload(
       ? 'با ربات مینی‌اپ'
       : '';
   if (note) {
-    await sendMessage(
+    const result = await sendMessage(
       orderBotToken,
       message.chat.id,
       delivered
         ? `✅ فایل دریافت شد و ${note} برای خریدار ارسال شد.`
         : `⚠️ فایل ذخیره شد، اما ارسال ناموفق بود (${personalReady ? 'حساب شخصی' : 'ربات مینی‌اپ'}). خریدار باید ابتدا ربات مینی‌اپ را Start کند.`
     );
+    if (result.success && result.messageId !== null) {
+      const database = new Database(db);
+      await database.telegramDeletionQueue.add(
+        String(message.chat.id),
+        result.messageId,
+        order.id,
+        type === 'photo' ? 'invoice' : 'voice'
+      );
+    }
   }
   return true;
 }
@@ -220,26 +213,6 @@ async function handleOrderCallback(
   const order = await database.orders.getById(orderId);
   if (!order) {
     await answerCallbackQuery(token, callbackQuery.id, 'سفارش یافت نشد.');
-    return;
-  }
-
-  if (action === 'toggle-payment') {
-    const isConfirming = order.payment_status !== 'paid';
-    const updated = await database.orders.update(orderId, {
-      payment_status: isConfirming ? 'paid' : 'pending',
-    });
-    if (updated) await updateAdminMessages(db, token, updated);
-    if (updated && isConfirming) {
-      await notifyCustomerPaymentConfirmed(
-        miniAppBotToken,
-        baseUrl,
-        updated,
-        { env, adminId: String(callbackQuery.from.id) }
-      );
-    }
-    await answerCallbackQuery(token, callbackQuery.id, updated?.payment_status === 'paid'
-      ? 'پرداخت تایید شد.'
-      : 'پرداخت به حالت پرداخت‌نشده برگشت.');
     return;
   }
 
@@ -288,14 +261,16 @@ async function handleTelegramUpdate(
 
 telegramRoutes.post('/webhook', async (c) => {
   if (!c.env.TELEGRAM_BOT_TOKEN) return c.json({ error: 'TELEGRAM_BOT_TOKEN not set' }, 500);
-  await handleTelegramUpdate(c.env.DB, c.env.TELEGRAM_BOT_TOKEN, c.env.BASE_URL, await c.req.json(), false, c.env.TELEGRAM_BOT_TOKEN, c.env);
+  const buttonUrl = c.env.MINI_APP_URL || c.env.BASE_URL;
+  await handleTelegramUpdate(c.env.DB, c.env.TELEGRAM_BOT_TOKEN, buttonUrl, await c.req.json(), false, c.env.TELEGRAM_BOT_TOKEN, c.env);
   return c.json({ ok: true });
 });
 
 telegramRoutes.post('/order-webhook', async (c) => {
   if (!c.env.ORDER_NOTIFY_BOT_TOKEN) return c.json({ error: 'ORDER_NOTIFY_BOT_TOKEN not set' }, 500);
   if (!c.env.TELEGRAM_BOT_TOKEN) return c.json({ error: 'TELEGRAM_BOT_TOKEN not set' }, 500);
-  await handleTelegramUpdate(c.env.DB, c.env.ORDER_NOTIFY_BOT_TOKEN, c.env.BASE_URL, await c.req.json(), true, c.env.TELEGRAM_BOT_TOKEN, c.env);
+  const buttonUrl = c.env.MINI_APP_URL || c.env.BASE_URL;
+  await handleTelegramUpdate(c.env.DB, c.env.ORDER_NOTIFY_BOT_TOKEN, buttonUrl, await c.req.json(), true, c.env.TELEGRAM_BOT_TOKEN, c.env);
   return c.json({ ok: true });
 });
 
@@ -321,7 +296,7 @@ telegramRoutes.get('/setup', async (c) => {
         menu_button: {
           type: 'web_app',
           text: 'باز کنید',
-          web_app: { url: c.env.BASE_URL },
+          web_app: { url: c.env.MINI_APP_URL || c.env.BASE_URL },
         },
       }),
     });

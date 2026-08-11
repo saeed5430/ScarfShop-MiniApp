@@ -189,6 +189,15 @@ export const QuickBuyPage: FC = () => {
           onSearchChange={setSearchQuery}
         />
 
+        <div className="quickbuy-guide">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10" />
+            <path d="M12 16v-4" />
+            <path d="M12 8h.01" />
+          </svg>
+          <span>ترتیب محصولات بر اساس سایز است: ابتدا محصولات سایز ۱۳۰، سپس سایز ۱۰۰ قرار داده شده‌اند.</span>
+        </div>
+
         <div className="quickbuy-list">
           {loading && (
             <>
@@ -268,7 +277,7 @@ export const QuickBuyPage: FC = () => {
                         style={{ backgroundColor: item.color.hex }}
                       />
                       <span>{item.color.name}</span>
-                      <span className="quickbuy-order-item-size">{item.size.dimensions}</span>
+                      <span className="quickbuy-order-item-size">سایز {item.size.dimensions}</span>
                     </div>
                     <span className="quickbuy-order-item-qty">×{item.quantity}</span>
                   </div>

@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { Database } from '../db';
 import { requireAdmin } from '../middleware/admin-auth';
-import { notifyCustomerPaymentConfirmed, updateAdminMessages } from './telegram';
+import { updateAdminMessages } from './telegram';
 
 type Bindings = {
   DB: D1Database;
@@ -139,9 +139,6 @@ adminApiRoutes.put('/orders/:id', async (c) => {
   if (!order) return c.json({ error: 'Not found' }, 404);
   if (c.env.ORDER_NOTIFY_BOT_TOKEN) {
     await updateAdminMessages(db, c.env.ORDER_NOTIFY_BOT_TOKEN, order);
-  }
-  if (previousOrder?.payment_status !== 'paid' && order.payment_status === 'paid' && c.env.TELEGRAM_BOT_TOKEN) {
-    await notifyCustomerPaymentConfirmed(c.env.TELEGRAM_BOT_TOKEN, c.env.BASE_URL, order);
   }
   return c.json({ order });
 });

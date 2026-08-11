@@ -20,6 +20,7 @@ export async function runMigrations(db: D1Database): Promise<void> {
     `CREATE TABLE IF NOT EXISTS coupons (id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT UNIQUE NOT NULL, discount INTEGER NOT NULL DEFAULT 0, type TEXT NOT NULL DEFAULT 'percentage' CHECK(type IN ('percentage', 'fixed')), expires_at INTEGER, is_active INTEGER DEFAULT 1, created_at INTEGER DEFAULT (unixepoch()), updated_at INTEGER DEFAULT (unixepoch()))`,
     `CREATE TABLE IF NOT EXISTS settings (id INTEGER PRIMARY KEY AUTOINCREMENT, key TEXT UNIQUE NOT NULL, value TEXT, type TEXT DEFAULT 'text' CHECK(type IN ('text', 'image', 'boolean', 'json')), label TEXT NOT NULL, created_at INTEGER DEFAULT (unixepoch()), updated_at INTEGER DEFAULT (unixepoch()))`,
     `CREATE TABLE IF NOT EXISTS admin_telegram_accounts (admin_id TEXT PRIMARY KEY, username TEXT, telegram_user_id TEXT, telegram_phone_masked TEXT, status TEXT NOT NULL DEFAULT 'not_connected' CHECK(status IN ('not_connected', 'connected', 'error', 'revoked', 'disabled')), personal_sending_enabled INTEGER NOT NULL DEFAULT 0, session_ref TEXT, last_connected_at INTEGER, last_verified_at INTEGER, last_error TEXT, created_at INTEGER DEFAULT (unixepoch()), updated_at INTEGER DEFAULT (unixepoch()))`,
+    `CREATE TABLE IF NOT EXISTS telegram_message_deletion_queue (id INTEGER PRIMARY KEY AUTOINCREMENT, telegram_chat_id TEXT NOT NULL, telegram_message_id INTEGER NOT NULL, order_id INTEGER NOT NULL, message_type TEXT NOT NULL CHECK(message_type IN ('invoice', 'voice', 'order_notification')), delete_at INTEGER NOT NULL, deleted_at INTEGER DEFAULT NULL, created_at INTEGER DEFAULT (unixepoch()))`,
     `CREATE INDEX IF NOT EXISTS idx_sessions_customer_id ON sessions(customer_id)`,
     `CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON sessions(expires_at)`,
     `CREATE INDEX IF NOT EXISTS idx_chats_customer_id ON chats(customer_id)`,
@@ -38,6 +39,8 @@ export async function runMigrations(db: D1Database): Promise<void> {
     `CREATE INDEX IF NOT EXISTS idx_coupons_code ON coupons(code)`,
     `CREATE INDEX IF NOT EXISTS idx_admin_telegram_accounts_status ON admin_telegram_accounts(status)`,
     `CREATE INDEX IF NOT EXISTS idx_admin_telegram_accounts_enabled ON admin_telegram_accounts(personal_sending_enabled)`,
+    `CREATE INDEX IF NOT EXISTS idx_telegram_message_deletion_queue_delete_at ON telegram_message_deletion_queue(delete_at)`,
+    `CREATE INDEX IF NOT EXISTS idx_telegram_message_deletion_queue_order_id ON telegram_message_deletion_queue(order_id)`,
     `INSERT OR IGNORE INTO admins (id, username, email, first_name, created_at, updated_at) VALUES ('admin_saeed54300', 'saeed54300', 'admin@armana.ir', 'سعید', unixepoch(), unixepoch())`,
     `INSERT OR IGNORE INTO customers (id, user_type, first_name, last_name, username, language_code, is_premium, created_at, last_active) VALUES ('demo_123456789', 'regular', 'سعید', 'احمدی', 'saeed54300', 'fa', 0, unixepoch(), unixepoch())`,
   ];

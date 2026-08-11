@@ -24,6 +24,22 @@ const useOrderMedia = (orderId: number, type: 'invoice' | 'voice'): MediaState =
   return { url, loading, error };
 };
 
+const formatTimestamp = (timestamp: number | null | undefined): string => {
+  if (!timestamp) return '';
+  try {
+    return new Date(timestamp * 1000).toLocaleString('fa-IR', {
+      timeZone: 'Asia/Tehran',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  } catch {
+    return '';
+  }
+};
+
 export const OrderCard: FC<{ order: Order }> = ({ order }) => {
   const invoiceMedia = useOrderMedia(order.id, 'invoice');
   const voiceMedia = useOrderMedia(order.id, 'voice');
@@ -63,6 +79,11 @@ export const OrderCard: FC<{ order: Order }> = ({ order }) => {
 
       <div className={`order-receipt-status ${order.invoice_uploaded_at ? 'ok' : 'missing'}`}>
         {order.invoice_uploaded_at ? 'فیش ثبت شده' : 'فیش ثبت نشده'}
+        {order.invoice_uploaded_at && (
+          <span className="order-timestamp">
+            {formatTimestamp(order.invoice_uploaded_at)}
+          </span>
+        )}
       </div>
 
       {order.invoice_uploaded_at && (
@@ -78,6 +99,9 @@ export const OrderCard: FC<{ order: Order }> = ({ order }) => {
           {voiceMedia.loading && <p className="order-media-hint">در حال دریافت صوت...</p>}
           {voiceMedia.error && <p className="order-media-hint">دریافت صوت ممکن نشد.</p>}
           {voiceMedia.url && <audio className="order-voice" controls src={voiceMedia.url} />}
+          <span className="order-timestamp">
+            {formatTimestamp(order.voice_uploaded_at)}
+          </span>
         </div>
       )}
     </article>

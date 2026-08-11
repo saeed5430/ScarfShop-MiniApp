@@ -7,6 +7,7 @@ import { adminTelegramRoutes } from './routes/admin-telegram';
 import { authRoutes } from './routes/auth';
 import { uploadRoutes } from './routes/upload-image';
 import { telegramRoutes } from './routes/telegram';
+import { cronRoutes } from './routes/cron';
 import { setupRoutes } from './routes/setup';
 import { runMigrations } from './db/migrate';
 import { requireAdmin } from './middleware/admin-auth';
@@ -23,6 +24,7 @@ type Bindings = {
   ORDER_NOTIFY_BOT_TOKEN: string;
   TELEGRAM_USER_SERVICE_URL: string;
   TELEGRAM_USER_SERVICE_TOKEN: string;
+  MINI_APP_URL: string;
 };
 
 const app = new Hono<{ Bindings: Bindings }>();
@@ -33,6 +35,7 @@ let migrationsDone = false;
 app.use('/api/*', cors({
   origin: [
     'https://scarf-admin.pages.dev',
+    'https://saeed5430.github.io',
     'http://localhost:3000',
   ],
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -70,6 +73,9 @@ app.route('/api', apiRoutes);
 
 // Telegram webhook (no auth needed)
 app.route('/webhook/telegram', telegramRoutes);
+
+// Cron routes (for scheduled tasks)
+app.route('/cron', cronRoutes);
 
 // Serve frontend assets
 app.get('*', async (c) => {
