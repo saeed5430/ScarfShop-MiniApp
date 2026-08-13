@@ -44,7 +44,7 @@ jobs:
         run: npm run build
         env:
           # Backend API origin (Cloudflare Worker). Hosted on GitHub Pages, so the API is cross-origin.
-          VITE_API_URL: https://scarf-mini-app.abdollahi003.workers.dev
+          VITE_API_URL: https://scarf-bale.abdollahi003.workers.dev
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
