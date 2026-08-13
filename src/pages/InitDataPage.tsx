@@ -1,9 +1,5 @@
 import { type FC, useMemo } from 'react';
-import {
-  initData,
-  type User,
-  useSignal,
-} from '@tma.js/sdk-react';
+import { useInitData, type User } from '@/bale/react';
 import { List, Placeholder } from '@telegram-apps/telegram-ui';
 
 import { DisplayData, type DisplayDataRow } from '@/components/DisplayData/DisplayData.tsx';
@@ -14,8 +10,7 @@ function getUserRows(user: User): DisplayDataRow[] {
 }
 
 export const InitDataPage: FC = () => {
-  const initDataRaw = useSignal(initData.raw);
-  const initDataState = useSignal(initData.state);
+  const { raw: initDataRaw, state: initDataState } = useInitData();
 
   const initDataRows = useMemo<DisplayDataRow[] | undefined>(() => {
     if (!initDataState || !initDataRaw) {
@@ -49,7 +44,10 @@ export const InitDataPage: FC = () => {
   const chatRows = useMemo<DisplayDataRow[] | undefined>(() => {
     return !initDataState?.chat
       ? undefined
-      : Object.entries(initDataState.chat).map(([title, value]) => ({ title, value }));
+      : Object.entries(initDataState.chat).map(([title, value]) => ({
+        title,
+        value: value as React.ReactNode,
+      }));
   }, [initDataState]);
 
   if (!initDataRows) {
@@ -60,7 +58,7 @@ export const InitDataPage: FC = () => {
           description="Application was launched with missing init data"
         >
           <img
-            alt="Telegram sticker"
+            alt="Bale sticker"
             src="https://xelene.me/telegram.gif"
             style={{ display: 'block', width: '144px', height: '144px' }}
           />

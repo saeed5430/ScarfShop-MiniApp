@@ -1,4 +1,4 @@
-import { useLaunchParams } from '@tma.js/sdk-react';
+import { useLaunchParams } from '@/bale/react';
 import { List } from '@telegram-apps/telegram-ui';
 import type { FC } from 'react';
 

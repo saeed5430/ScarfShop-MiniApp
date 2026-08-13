@@ -4,15 +4,15 @@ import { Database } from '../db';
 
 type Bindings = {
   DB: D1Database;
-  TELEGRAM_BOT_TOKEN: string;
+  BALE_BOT_TOKEN: string;
 };
 
 export const authRoutes = new Hono<{ Bindings: Bindings }>();
 
-// Telegram Login - verifies initData and creates/extends session
+// Bale Login - verifies initData and creates/extends session
 authRoutes.post('/login', async (c) => {
   const db = c.env.DB;
-  const botToken = c.env.TELEGRAM_BOT_TOKEN;
+  const botToken = c.env.BALE_BOT_TOKEN;
 
   if (!db) return c.json({ error: 'Database not configured' }, 500);
   if (!botToken) return c.json({ error: 'Bot token not configured' }, 500);

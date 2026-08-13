@@ -1,7 +1,7 @@
 import type { D1Database } from '@cloudflare/workers-types';
 import { Database } from './db';
 
-export interface TelegramInitData {
+export interface BaleInitData {
   query_id: string;
   user?: {
     id: number;
@@ -32,7 +32,7 @@ export function parseInitData(initData: string): Record<string, string> {
   return result;
 }
 
-export function extractUserFromInitData(initData: string): TelegramInitData['user'] | null {
+export function extractUserFromInitData(initData: string): BaleInitData['user'] | null {
   const params = parseInitData(initData);
   const userJson = params['user'];
 
@@ -41,13 +41,13 @@ export function extractUserFromInitData(initData: string): TelegramInitData['use
   }
 
   try {
-    return JSON.parse(userJson) as TelegramInitData['user'];
+    return JSON.parse(userJson) as BaleInitData['user'];
   } catch {
     return null;
   }
 }
 
-export async function verifyTelegramInitData(
+export async function verifyBaleInitData(
   initData: string,
   botToken: string
 ): Promise<boolean> {
@@ -77,7 +77,6 @@ export async function verifyTelegramInitData(
 
     const encoder = new TextEncoder();
 
-    // Step 1: secret_key = HMAC-SHA256("WebAppData", bot_token)
     const secretKeyRaw = await crypto.subtle.importKey(
       'raw',
       encoder.encode('WebAppData'),
@@ -92,7 +91,6 @@ export async function verifyTelegramInitData(
       encoder.encode(botToken)
     );
 
-    // Step 2: hash = HMAC-SHA256(secret_key, data_check_string)
     const hmacKey = await crypto.subtle.importKey(
       'raw',
       secretKey,
@@ -107,7 +105,6 @@ export async function verifyTelegramInitData(
       encoder.encode(dataCheckString)
     );
 
-    // Convert to hex string
     const computedHashHex = Array.from(new Uint8Array(computedHash))
       .map(b => b.toString(16).padStart(2, '0'))
       .join('');
@@ -130,29 +127,28 @@ export async function authenticateCustomer(
 }> {
   const database = new Database(db);
 
-  const isValid = await verifyTelegramInitData(initData, botToken);
+  const isValid = await verifyBaleInitData(initData, botToken);
 
   if (!isValid) {
     return { success: false, error: 'Invalid init data' };
   }
 
-  const telegramUser = extractUserFromInitData(initData);
+  const baleUser = extractUserFromInitData(initData);
 
-  if (!telegramUser) {
+  if (!baleUser) {
     return { success: false, error: 'User data not found' };
   }
 
-  const customerId = String(telegramUser.id);
+  const customerId = String(baleUser.id);
 
-  // Use updateTelegramFields to preserve profile data (phone, address, etc.)
   await database.customers.updateTelegramFields({
     id: customerId,
-    first_name: telegramUser.first_name,
-    last_name: telegramUser.last_name,
-    username: telegramUser.username,
-    language_code: telegramUser.language_code,
-    photo_url: telegramUser.photo_url,
-    is_premium: telegramUser.is_premium,
+    first_name: baleUser.first_name,
+    last_name: baleUser.last_name,
+    username: baleUser.username,
+    language_code: baleUser.language_code,
+    photo_url: baleUser.photo_url,
+    is_premium: baleUser.is_premium,
   });
 
   const existingSession = await database.sessions.findValidByCustomerId(customerId);

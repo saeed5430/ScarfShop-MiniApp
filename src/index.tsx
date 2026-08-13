@@ -3,30 +3,28 @@ import '@telegram-apps/telegram-ui/dist/styles.css';
 
 import ReactDOM from 'react-dom/client';
 import { StrictMode } from 'react';
-import { retrieveLaunchParams } from '@tma.js/sdk-react';
 
 import { Root } from '@/components/Root.tsx';
 import { EnvUnsupported } from '@/components/EnvUnsupported.tsx';
+import { getWebApp } from '@/bale/webApp';
 import { init } from '@/init.ts';
 
 import './index.css';
 
-// Mock the environment in case, we are outside Telegram.
+// Mock the environment in case, we are outside Bale.
 import './mockEnv.ts';
 
 const root = ReactDOM.createRoot(document.getElementById('root')!);
 
 try {
-  const launchParams = retrieveLaunchParams();
-  const { tgWebAppPlatform: platform } = launchParams;
-  const debug = (launchParams.tgWebAppStartParam || '').includes('debug')
-    || import.meta.env.DEV;
+  const webApp = getWebApp();
+  const startParam = new URLSearchParams(window.location.search).get('tgWebAppStartParam') || '';
+  const debug = startParam.includes('debug') || import.meta.env.DEV;
 
   // Configure all application dependencies.
   await init({
     debug,
-    eruda: debug && ['ios', 'android'].includes(platform),
-    mockForMacOS: platform === 'macos',
+    eruda: debug && webApp?.isIframe === false,
   })
     .then(() => {
       root.render(

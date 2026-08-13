@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import { useRawInitData } from '@tma.js/sdk-react';
+import { useRawInitData } from '@/bale/react';
 import { login, getCurrentCustomer, checkIsAdmin, type Customer } from '@/api/client';
 
 interface AuthContextType {

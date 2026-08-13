@@ -1,5 +1,5 @@
 import { Placeholder, AppRoot } from '@telegram-apps/telegram-ui';
-import { retrieveLaunchParams, isColorDark, isRGB } from '@tma.js/sdk-react';
+import { retrieveLaunchParams, isColorDark, isRGB } from '@/bale/react';
 import { useMemo } from 'react';
 
 export function EnvUnsupported() {
@@ -20,10 +20,10 @@ export function EnvUnsupported() {
     >
       <Placeholder
         header="Oops"
-        description="You are using too old Telegram client to run this application"
+        description="You are using too old Bale client to run this application"
       >
         <img
-          alt="Telegram sticker"
+          alt="Bale sticker"
           src="https://xelene.me/telegram.gif"
           style={{ display: 'block', width: '144px', height: '144px' }}
         />

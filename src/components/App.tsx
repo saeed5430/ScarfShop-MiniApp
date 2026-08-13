@@ -1,5 +1,5 @@
-import { Navigate, Route, Routes, HashRouter } from 'react-router-dom';
-import { useLaunchParams, useSignal, miniApp } from '@tma.js/sdk-react';
+import { Navigate, Route, Routes, MemoryRouter } from 'react-router-dom';
+import { useIsDark, useLaunchParams } from '@/bale/react';
 import { AppRoot } from '@telegram-apps/telegram-ui';
 
 import { routes } from '@/navigation/routes.tsx';
@@ -38,7 +38,7 @@ function LoadingScreen() {
 
 export function App() {
   const lp = useLaunchParams();
-  const isDark = useSignal(miniApp.isDark);
+  const isDark = useIsDark();
   const { loading } = useAuth();
 
   return (
@@ -46,7 +46,7 @@ export function App() {
       appearance={isDark ? 'dark' : 'light'}
       platform={['macos', 'ios'].includes(lp.tgWebAppPlatform) ? 'ios' : 'base'}
     >
-      <HashRouter>
+      <MemoryRouter>
         {loading ? (
           <LoadingScreen />
         ) : (
@@ -55,7 +55,7 @@ export function App() {
             <Route path="*" element={<Navigate to="/"/>}/>
           </Routes>
         )}
-      </HashRouter>
+      </MemoryRouter>
     </AppRoot>
   );
 }

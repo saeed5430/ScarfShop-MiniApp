@@ -1,12 +1,13 @@
 import { Hono } from 'hono';
 import { Database } from '../db';
 import { requireAdmin } from '../middleware/admin-auth';
-import { updateAdminMessages } from './telegram';
+import { updateAdminMessages } from './bale';
+import { getFile, getFileDownloadUrl } from '../types';
 
 type Bindings = {
   DB: D1Database;
-  ORDER_NOTIFY_BOT_TOKEN: string;
-  TELEGRAM_BOT_TOKEN: string;
+  BALE_ORDER_NOTIFY_BOT_TOKEN: string;
+  BALE_BOT_TOKEN: string;
   BASE_URL: string;
 };
 
@@ -134,28 +135,27 @@ adminApiRoutes.put('/orders/:id', async (c) => {
     return c.json({ error: 'Invalid payment status' }, 400);
   }
   const database = new Database(db);
-  const previousOrder = await database.orders.getById(id);
   const order = await database.orders.update(id, body);
   if (!order) return c.json({ error: 'Not found' }, 404);
-  if (c.env.ORDER_NOTIFY_BOT_TOKEN) {
-    await updateAdminMessages(db, c.env.ORDER_NOTIFY_BOT_TOKEN, order);
+  if (c.env.BALE_ORDER_NOTIFY_BOT_TOKEN) {
+    await updateAdminMessages(db, c.env.BALE_ORDER_NOTIFY_BOT_TOKEN, order);
   }
   return c.json({ order });
 });
 
 adminApiRoutes.get('/orders/:id/receipt', async (c) => {
   const db = c.env.DB;
-  const botToken = c.env.ORDER_NOTIFY_BOT_TOKEN;
+  const botToken = c.env.BALE_ORDER_NOTIFY_BOT_TOKEN;
   if (!db || !botToken) return c.json({ error: 'Receipt service not configured' }, 500);
   const order = await new Database(db).orders.getById(Number(c.req.param('id')));
   if (!order) return c.json({ error: 'Not found' }, 404);
   const type = c.req.query('type') === 'voice' ? 'voice' : 'invoice';
   const fileId = type === 'voice' ? order.voice_file_id : order.invoice_file_id;
   if (!fileId) return c.json({ error: 'File not uploaded' }, 404);
-  const fileResponse = await fetch(`https://api.telegram.org/bot${botToken}/getFile?file_id=${encodeURIComponent(fileId)}`);
+  const fileResponse = await getFile(botToken, fileId);
   const fileData = await fileResponse.json<{ ok?: boolean; result?: { file_path?: string } }>();
   if (!fileData.ok || !fileData.result?.file_path) return c.json({ error: 'File unavailable' }, 404);
-  const mediaResponse = await fetch(`https://api.telegram.org/file/bot${botToken}/${fileData.result.file_path}`);
+  const mediaResponse = await fetch(getFileDownloadUrl(botToken, fileData.result.file_path));
   if (!mediaResponse.ok || !mediaResponse.body) return c.json({ error: 'File unavailable' }, 404);
   return new Response(mediaResponse.body, {
     headers: {

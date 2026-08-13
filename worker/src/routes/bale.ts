@@ -5,29 +5,24 @@ import { Database } from '../db';
 import type { Order } from '../db';
 import { formatOrderMessage, orderActionKeyboard } from '../services/notify';
 import {
-  isPersonalReady,
-  sendReceiptViaPersonal,
-  sendTextViaPersonal,
-  type PersonalDeliveryEnv,
-} from '../services/personal-delivery';
-import {
   answerCallbackQuery,
-  deleteMessage,
+  BALE_API,
   editMessageText,
+  getFile,
+  getFileDownloadUrl,
   sendMessage,
-  sendPhoto,
-  sendVoice,
-  type TelegramUpdate,
+  setChatMenuButton,
+  setWebhook,
+  type BaleUpdate,
 } from '../types';
 
 type Bindings = {
-  TELEGRAM_BOT_TOKEN: string;
-  ORDER_NOTIFY_BOT_TOKEN: string;
+  BALE_BOT_TOKEN: string;
+  BALE_ORDER_NOTIFY_BOT_TOKEN: string;
   BASE_URL: string;
   MINI_APP_URL?: string;
   DB: D1Database;
-  TELEGRAM_USER_SERVICE_URL?: string;
-  TELEGRAM_USER_SERVICE_TOKEN?: string;
+  BALE_ADMIN_IDS?: string;
 };
 
 type EnrichedOrderItem = {
@@ -39,9 +34,14 @@ type EnrichedOrderItem = {
   quantity: number;
 };
 
-const ADMIN_IDS = new Set(['6451725218', '6586804580']);
+function parseAdminIds(env: Bindings): Set<string> {
+  if (env.BALE_ADMIN_IDS) {
+    return new Set(env.BALE_ADMIN_IDS.split(',').map(s => s.trim()).filter(Boolean));
+  }
+  return new Set<string>();
+}
 
-export const telegramRoutes = new Hono<{ Bindings: Bindings }>();
+export const baleRoutes = new Hono<{ Bindings: Bindings }>();
 
 async function getOrderItems(db: D1Database, orderId: number): Promise<EnrichedOrderItem[]> {
   const { results } = await db.prepare(`
@@ -92,27 +92,24 @@ async function deliverReceiptToCustomer(
   miniAppBotToken: string,
   order: Order,
   type: 'photo' | 'voice',
-  fileId: string,
-  personal?: { env: PersonalDeliveryEnv; adminId: string }
+  fileId: string
 ): Promise<boolean> {
   const caption = type === 'photo'
     ? `🧾 فاکتور سفارش #${order.id}`
     : `🎙️ توضیحات سفارش #${order.id}`;
-  if (personal && await sendReceiptViaPersonal(personal.env, personal.adminId, order, type, fileId, orderBotToken)) {
-    return true;
-  }
-  const fileResponse = await fetch(`https://api.telegram.org/bot${orderBotToken}/getFile?file_id=${encodeURIComponent(fileId)}`);
+
+  const fileResponse = await getFile(orderBotToken, fileId);
   const fileData = await fileResponse.json<{ ok?: boolean; result?: { file_path?: string } }>();
   if (!fileData.ok || !fileData.result?.file_path) return false;
 
-  const mediaResponse = await fetch(`https://api.telegram.org/file/bot${orderBotToken}/${fileData.result.file_path}`);
+  const mediaResponse = await fetch(getFileDownloadUrl(orderBotToken, fileData.result.file_path));
   if (!mediaResponse.ok) return false;
   const file = await mediaResponse.blob();
   const form = new FormData();
   form.set('chat_id', order.user_id);
   form.set('caption', caption);
   form.set(type === 'photo' ? 'photo' : 'voice', file, fileData.result.file_path.split('/').at(-1) || `order-${order.id}`);
-  const sendResponse = await fetch(`https://api.telegram.org/bot${miniAppBotToken}/${type === 'photo' ? 'sendPhoto' : 'sendVoice'}`, {
+  const sendResponse = await fetch(`${BALE_API}/bot${miniAppBotToken}/${type === 'photo' ? 'sendPhoto' : 'sendVoice'}`, {
     method: 'POST',
     body: form,
   });
@@ -133,11 +130,11 @@ async function handleAdminUpload(
   db: D1Database,
   orderBotToken: string,
   miniAppBotToken: string,
-  update: TelegramUpdate,
-  env: PersonalDeliveryEnv
+  update: BaleUpdate,
+  adminIds: Set<string>
 ): Promise<boolean> {
   const message = update.message;
-  if (!message || !ADMIN_IDS.has(String(message.from.id))) return false;
+  if (!message || !adminIds.has(String(message.from.id))) return false;
   const database = new Database(db);
   const waiting = await database.orderTelegram.getWaiting(String(message.from.id));
   if (!waiting) return false;
@@ -160,32 +157,24 @@ async function handleAdminUpload(
     return true;
   }
 
-  const personal = { env, adminId: String(message.from.id) };
-  const personalReady = await isPersonalReady(db, personal.adminId);
-  const delivered = await deliverReceiptToCustomer(orderBotToken, miniAppBotToken, order, type, fileId, personal);
+  const delivered = await deliverReceiptToCustomer(orderBotToken, miniAppBotToken, order, type, fileId);
   await updateAdminMessages(db, orderBotToken, order);
-  const note = personalReady
-    ? 'از حساب شخصی شما'
-    : delivered
-      ? 'با ربات مینی‌اپ'
-      : '';
-  if (note) {
-    const result = await sendMessage(
-      orderBotToken,
-      message.chat.id,
-      delivered
-        ? `✅ فایل دریافت شد و ${note} برای خریدار ارسال شد.`
-        : `⚠️ فایل ذخیره شد، اما ارسال ناموفق بود (${personalReady ? 'حساب شخصی' : 'ربات مینی‌اپ'}). خریدار باید ابتدا ربات مینی‌اپ را Start کند.`
+  const response = await sendMessage(
+    orderBotToken,
+    message.chat.id,
+    delivered
+      ? '✅ فایل دریافت شد و با ربات مینی‌اپ برای خریدار ارسال شد.'
+      : '⚠️ فایل ذخیره شد، اما ارسال ناموفق بود. خریدار باید ابتدا ربات مینی‌اپ را Start کند.'
+  );
+  const result = await response.json<{ ok?: boolean; result?: { message_id?: number } }>();
+  if (result.ok && result.result?.message_id !== undefined) {
+    const database = new Database(db);
+    await database.telegramDeletionQueue.add(
+      String(message.chat.id),
+      result.result.message_id,
+      order.id,
+      type === 'photo' ? 'invoice' : 'voice'
     );
-    if (result.success && result.messageId !== null) {
-      const database = new Database(db);
-      await database.telegramDeletionQueue.add(
-        String(message.chat.id),
-        result.messageId,
-        order.id,
-        type === 'photo' ? 'invoice' : 'voice'
-      );
-    }
   }
   return true;
 }
@@ -195,10 +184,10 @@ async function handleOrderCallback(
   token: string,
   miniAppBotToken: string,
   baseUrl: string,
-  callbackQuery: NonNullable<TelegramUpdate['callback_query']>,
-  env: PersonalDeliveryEnv
+  callbackQuery: NonNullable<BaleUpdate['callback_query']>,
+  adminIds: Set<string>
 ): Promise<void> {
-  if (!ADMIN_IDS.has(String(callbackQuery.from.id))) {
+  if (!adminIds.has(String(callbackQuery.from.id))) {
     await answerCallbackQuery(token, callbackQuery.id, 'دسترسی غیرمجاز است.');
     return;
   }
@@ -235,21 +224,21 @@ async function handleOrderCallback(
   await answerCallbackQuery(token, callbackQuery.id, 'عملیات نامعتبر است.');
 }
 
-async function handleTelegramUpdate(
+async function handleBaleUpdate(
   db: D1Database,
   token: string,
   baseUrl: string,
-  update: TelegramUpdate,
+  update: BaleUpdate,
   allowOrderActions: boolean,
   miniAppBotToken: string,
-  env: PersonalDeliveryEnv
+  adminIds: Set<string>
 ): Promise<void> {
   if (update.callback_query) {
-    if (allowOrderActions) await handleOrderCallback(db, token, miniAppBotToken, baseUrl, update.callback_query, env);
+    if (allowOrderActions) await handleOrderCallback(db, token, miniAppBotToken, baseUrl, update.callback_query, adminIds);
     else await answerCallbackQuery(token, update.callback_query.id, 'این دکمه برای ربات سفارش است.');
     return;
   }
-  if (allowOrderActions && await handleAdminUpload(db, token, miniAppBotToken, update, env)) return;
+  if (allowOrderActions && await handleAdminUpload(db, token, miniAppBotToken, update, adminIds)) return;
   if (!update.message?.text) return;
   const { id: chatId } = update.message.chat;
   const { text } = update.message;
@@ -259,47 +248,38 @@ async function handleTelegramUpdate(
   else await handleUnknown(token, chatId);
 }
 
-telegramRoutes.post('/webhook', async (c) => {
-  if (!c.env.TELEGRAM_BOT_TOKEN) return c.json({ error: 'TELEGRAM_BOT_TOKEN not set' }, 500);
+baleRoutes.post('/webhook', async (c) => {
+  if (!c.env.BALE_BOT_TOKEN) return c.json({ error: 'BALE_BOT_TOKEN not set' }, 500);
   const buttonUrl = c.env.MINI_APP_URL || c.env.BASE_URL;
-  await handleTelegramUpdate(c.env.DB, c.env.TELEGRAM_BOT_TOKEN, buttonUrl, await c.req.json(), false, c.env.TELEGRAM_BOT_TOKEN, c.env);
+  const adminIds = parseAdminIds(c.env);
+  await handleBaleUpdate(c.env.DB, c.env.BALE_BOT_TOKEN, buttonUrl, await c.req.json(), false, c.env.BALE_BOT_TOKEN, adminIds);
   return c.json({ ok: true });
 });
 
-telegramRoutes.post('/order-webhook', async (c) => {
-  if (!c.env.ORDER_NOTIFY_BOT_TOKEN) return c.json({ error: 'ORDER_NOTIFY_BOT_TOKEN not set' }, 500);
-  if (!c.env.TELEGRAM_BOT_TOKEN) return c.json({ error: 'TELEGRAM_BOT_TOKEN not set' }, 500);
+baleRoutes.post('/order-webhook', async (c) => {
+  if (!c.env.BALE_ORDER_NOTIFY_BOT_TOKEN) return c.json({ error: 'BALE_ORDER_NOTIFY_BOT_TOKEN not set' }, 500);
+  if (!c.env.BALE_BOT_TOKEN) return c.json({ error: 'BALE_BOT_TOKEN not set' }, 500);
   const buttonUrl = c.env.MINI_APP_URL || c.env.BASE_URL;
-  await handleTelegramUpdate(c.env.DB, c.env.ORDER_NOTIFY_BOT_TOKEN, buttonUrl, await c.req.json(), true, c.env.TELEGRAM_BOT_TOKEN, c.env);
+  const adminIds = parseAdminIds(c.env);
+  await handleBaleUpdate(c.env.DB, c.env.BALE_ORDER_NOTIFY_BOT_TOKEN, buttonUrl, await c.req.json(), true, c.env.BALE_BOT_TOKEN, adminIds);
   return c.json({ ok: true });
 });
 
-telegramRoutes.get('/setup', async (c) => {
+baleRoutes.get('/setup', async (c) => {
   const configs = [
-    { token: c.env.TELEGRAM_BOT_TOKEN, url: `${c.env.BASE_URL}/webhook/telegram/webhook` },
-    { token: c.env.ORDER_NOTIFY_BOT_TOKEN, url: `${c.env.BASE_URL}/webhook/telegram/order-webhook` },
+    { token: c.env.BALE_BOT_TOKEN, url: `${c.env.BASE_URL}/webhook/bale/webhook` },
+    { token: c.env.BALE_ORDER_NOTIFY_BOT_TOKEN, url: `${c.env.BASE_URL}/webhook/bale/order-webhook` },
   ].filter((config): config is { token: string; url: string } => Boolean(config.token));
   const results = await Promise.all(configs.map(async ({ token, url }) => {
-    const response = await fetch(`https://api.telegram.org/bot${token}/setWebhook`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url, allowed_updates: ['message', 'callback_query'] }),
-    });
+    const response = await setWebhook(token, url);
     return { url, result: await response.json() };
   }));
   let menuButtonResult: unknown = null;
-  if (c.env.TELEGRAM_BOT_TOKEN) {
-    const response = await fetch(`https://api.telegram.org/bot${c.env.TELEGRAM_BOT_TOKEN}/setChatMenuButton`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        menu_button: {
-          type: 'web_app',
-          text: 'باز کنید',
-          web_app: { url: c.env.MINI_APP_URL || c.env.BASE_URL },
-        },
-      }),
-    });
+  if (c.env.BALE_BOT_TOKEN) {
+    const response = await setChatMenuButton(
+      c.env.BALE_BOT_TOKEN,
+      c.env.MINI_APP_URL || c.env.BASE_URL
+    );
     menuButtonResult = await response.json();
   }
   return c.json({ results, menuButtonResult });

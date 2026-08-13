@@ -2,22 +2,22 @@ import type { D1Database } from '@cloudflare/workers-types';
 import { Database } from '../db';
 import type { DeliveryMethod } from '../db';
 
-// Known delivery method labels
 const DELIVERY_LABELS: Record<DeliveryMethod, string> = {
   in_person: '🏪 تحویل حضوری',
   tipax: '🚚 ارسال با تیپاکس',
   carrier: '🚛 ارسال با باربری',
 };
 
-// Send message to Telegram user by chat_id
-export async function sendTelegramMessage(
+const BALE_API = 'https://tapi.bale.ai';
+
+export async function sendBaleMessage(
   botToken: string,
   chatId: string,
   message: string,
   replyMarkup?: object
 ): Promise<{ success: boolean; messageId: number | null }> {
   try {
-    const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
+    const url = `${BALE_API}/bot${botToken}/sendMessage`;
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -31,17 +31,16 @@ export async function sendTelegramMessage(
 
     const data: { ok?: boolean; result?: { message_id?: number }; description?: string } = await response.json();
     if (!data.ok) {
-      console.error('Telegram sendMessage failed:', data.description);
+      console.error('Bale sendMessage failed:', data.description);
     }
     return { success: data.ok === true, messageId: data.result?.message_id ?? null };
   } catch (error) {
-    console.error('Failed to send Telegram message:', error);
+    console.error('Failed to send Bale message:', error);
     return { success: false, messageId: null };
   }
 }
 
-// Send message and queue for 24-hour auto-deletion
-export async function sendTelegramMessageWithDeletion(
+export async function sendBaleMessageWithDeletion(
   db: D1Database,
   botToken: string,
   chatId: string,
@@ -50,10 +49,9 @@ export async function sendTelegramMessageWithDeletion(
   messageType: 'invoice' | 'voice' | 'order_notification',
   replyMarkup?: object
 ): Promise<{ success: boolean; messageId: number | null }> {
-  const result = await sendTelegramMessage(botToken, chatId, message, replyMarkup);
+  const result = await sendBaleMessage(botToken, chatId, message, replyMarkup);
   if (result.success && result.messageId !== null) {
     try {
-      const { Database } = await import('../db');
       const database = new Database(db);
       await database.telegramDeletionQueue.add(chatId, result.messageId, orderId, messageType);
     } catch (e) {
@@ -74,13 +72,12 @@ export function orderActionKeyboard(orderId: number, paymentStatus: 'pending' | 
   };
 }
 
-// Get chat_id by username
 async function getChatIdByUsername(
   botToken: string,
   username: string
 ): Promise<string | null> {
   try {
-    const url = `https://api.telegram.org/bot${botToken}/getChat?chat_id=@${username}`;
+    const url = `${BALE_API}/bot${botToken}/getChat?chat_id=@${username}`;
     const response = await fetch(url);
     const data: { ok?: boolean; result?: { id?: number }; description?: string } = await response.json();
 
@@ -96,17 +93,8 @@ async function getChatIdByUsername(
   }
 }
 
-// Known admin mappings: username -> known Telegram user ID (numeric)
-// These work directly if the user has started THIS bot
-const ADMIN_CHAT_IDS: Record<string, string> = {
-  'saeed54300': '6451725218', // @saeed54300
-  'abdollahisz': '6586804580', // @abdollahisz
-};
-
-// Fixed list of admin usernames to notify
 const NOTIFY_ADMIN_USERNAMES = ['saeed54300', 'abdollahisz'];
 
-// Format order notification message
 export function formatOrderMessage(
   orderId: number,
   customer: {
@@ -134,7 +122,6 @@ export function formatOrderMessage(
 ): string {
   let message = `🛍️ <b>سفارش جدید #${orderId}</b>\n\n`;
 
-  // Customer info
   message += `👤 <b>اطلاعات مشتری:</b>\n`;
   message += `├ نام: ${customer.first_name} ${customer.last_name || ''}\n`;
   message += `├ یوزرنیم: ${customer.username ? `@${customer.username}` : 'ندارد'}\n`;
@@ -147,12 +134,10 @@ export function formatOrderMessage(
   }
   message += `\n\n`;
 
-  // Delivery method
   if (deliveryMethod) {
     message += `📦 <b>نحوه تحویل:</b> ${DELIVERY_LABELS[deliveryMethod] ?? deliveryMethod}\n\n`;
   }
 
-  // Order items
   message += `📦 <b>اقلام سفارش:</b>\n`;
   items.forEach((item, index) => {
     const productName = [item.category_name, item.product_name].filter(Boolean).join(' ');
@@ -174,7 +159,6 @@ export function formatOrderMessage(
   return message;
 }
 
-// Main function to send order notification
 export async function sendOrderNotification(
   db: D1Database,
   botToken: string,
@@ -192,33 +176,23 @@ export async function sendOrderNotification(
 ): Promise<{ sent: number; failed: number }> {
   const database = new Database(db);
 
-  // Get customer info
   const customer = await database.customers.findById(customerId);
   if (!customer) {
     console.error('Customer not found for notification:', customerId);
     return { sent: 0, failed: 0 };
   }
 
-  // Format message
   const message = formatOrderMessage(orderId, customer, items, undefined, deliveryMethod);
   const replyMarkup = orderActionKeyboard(orderId, 'pending', false, false);
 
   let sent = 0;
   let failed = 0;
 
-  // Send to specific admin usernames
   for (const username of NOTIFY_ADMIN_USERNAMES) {
-    // First try known numeric ID (works if user started this bot)
-    const knownChatId = ADMIN_CHAT_IDS[username];
-    let chatId = knownChatId || null;
-
-    // If no known ID or sending failed, try username lookup
-    if (!chatId) {
-      chatId = await getChatIdByUsername(botToken, username);
-    }
+    const chatId = await getChatIdByUsername(botToken, username);
 
     if (chatId) {
-      const result = await sendTelegramMessageWithDeletion(db, botToken, chatId, message, orderId, 'order_notification', replyMarkup);
+      const result = await sendBaleMessageWithDeletion(db, botToken, chatId, message, orderId, 'order_notification', replyMarkup);
       if (result.success) {
         sent++;
         if (result.messageId !== null) {

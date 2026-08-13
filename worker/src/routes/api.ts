@@ -3,11 +3,12 @@ import { Database } from '../db';
 import { authenticateCustomer, validateSession } from '../auth';
 import { requireAdmin } from '../middleware/admin-auth';
 import { requireCustomer } from '../middleware/customer-auth';
+import { getFile, getFileDownloadUrl } from '../types';
 
 type Bindings = {
   DB: D1Database;
-  TELEGRAM_BOT_TOKEN: string;
-  ORDER_NOTIFY_BOT_TOKEN: string;
+  BALE_BOT_TOKEN: string;
+  BALE_ORDER_NOTIFY_BOT_TOKEN: string;
 };
 
 export const apiRoutes = new Hono<{ Bindings: Bindings }>();
@@ -20,7 +21,7 @@ apiRoutes.get('/health', (c) => {
 
 apiRoutes.post('/auth/login', async (c) => {
   const db = c.env.DB;
-  const botToken = c.env.TELEGRAM_BOT_TOKEN;
+  const botToken = c.env.BALE_BOT_TOKEN;
 
   if (!db) return c.json({ error: 'Database not configured' }, 500);
   if (!botToken) return c.json({ error: 'Bot token not configured' }, 500);
@@ -70,9 +71,9 @@ apiRoutes.get('/auth/is-admin', async (c) => {
   const customer = await database.customers.findById(result.customer_id!);
   if (!customer) return c.json({ is_admin: false }, 200);
 
-  // Check by username (Telegram username)
+  // Check by username (Bale username)
   const adminByUsername = await database.admins.findByUsername(customer.username || '');
-  // Also check by customer_id (Telegram user ID)
+  // Also check by customer_id (Bale user ID)
   const adminByCustomerId = customer.id ? await database.admins.findByCustomerId(customer.id) : null;
 
   return c.json({ is_admin: adminByUsername !== null || adminByCustomerId !== null });
@@ -786,7 +787,7 @@ apiRoutes.get('/my-orders', requireCustomer, async (c) => {
 
 apiRoutes.get('/my-orders/:id/receipt', requireCustomer, async (c) => {
   const db = c.env.DB;
-  const botToken = c.env.ORDER_NOTIFY_BOT_TOKEN;
+  const botToken = c.env.BALE_ORDER_NOTIFY_BOT_TOKEN;
   if (!db) return c.json({ error: 'Database not configured' }, 500);
   if (!botToken) return c.json({ error: 'Receipt service not configured' }, 500);
 
@@ -800,11 +801,11 @@ apiRoutes.get('/my-orders/:id/receipt', requireCustomer, async (c) => {
   const fileType = requestedType === 'voice' ? 'voice' : requestedType === 'invoice' ? 'photo' : order.receipt_file_type;
   const fileId = fileType === 'voice' ? order.voice_file_id : order.invoice_file_id;
   if (!fileId) return c.json({ error: 'Receipt not uploaded' }, 404);
-  const fileResponse = await fetch(`https://api.telegram.org/bot${botToken}/getFile?file_id=${encodeURIComponent(fileId)}`);
+  const fileResponse = await getFile(botToken, fileId);
   const fileData = await fileResponse.json<{ ok?: boolean; result?: { file_path?: string } }>();
   if (!fileData.ok || !fileData.result?.file_path) return c.json({ error: 'Receipt unavailable' }, 404);
 
-  const mediaResponse = await fetch(`https://api.telegram.org/file/bot${botToken}/${fileData.result.file_path}`);
+  const mediaResponse = await fetch(getFileDownloadUrl(botToken, fileData.result.file_path));
   if (!mediaResponse.ok || !mediaResponse.body) return c.json({ error: 'Receipt unavailable' }, 404);
   return new Response(mediaResponse.body, {
     headers: {
@@ -846,7 +847,7 @@ apiRoutes.get('/orders/:id', async (c) => {
 
 apiRoutes.post('/orders', requireCustomer, async (c) => {
   const db = c.env.DB;
-  const orderNotifyBotToken = c.env.ORDER_NOTIFY_BOT_TOKEN;
+  const orderNotifyBotToken = c.env.BALE_ORDER_NOTIFY_BOT_TOKEN;
   if (!db) return c.json({ error: 'Database not configured' }, 500);
 
   const authHeader = c.req.header('Authorization');
