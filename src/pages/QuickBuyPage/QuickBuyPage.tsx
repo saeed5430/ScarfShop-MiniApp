@@ -228,29 +228,34 @@ export const QuickBuyPage: FC = () => {
             </div>
           )}
 
-          {!loading && products.map((pwr) =>
-            pwr.sizes.length > 0
-              ? pwr.sizes.map((size) => (
+{!loading && (() => {
+            // اگر سایز انتخاب شده است، فقط محصولاتی که آن سایز را دارند را نمایش بده
+            // و برای هر محصول فقط یک کارت با آن سایز خاص بساز
+            const filteredProducts = selectedSize
+              ? products.filter((pwr) =>
+                  pwr.sizes.some((s) => s.id === selectedSize)
+                )
+              : products;
+
+            return filteredProducts.map((pwr) => {
+              const size = selectedSize
+                ? pwr.sizes.find((s) => s.id === selectedSize) ?? null
+                : pwr.sizes.length > 0
+                  ? pwr.sizes[0]
+                  : null;
+
+              return (
                 <ProductCard
-                  key={`${pwr.product.id}-${size.id}`}
+                  key={selectedSize ? `${pwr.product.id}-${size?.id}` : pwr.product.id}
                   productWithRelations={pwr}
                   selectedSize={size}
                   selectedItems={selectedItems}
                   onToggleColor={toggleColor}
                   onUpdateQuantity={updateQuantity}
                 />
-              ))
-              : (
-                <ProductCard
-                  key={pwr.product.id}
-                  productWithRelations={pwr}
-                  selectedSize={null}
-                  selectedItems={selectedItems}
-                  onToggleColor={toggleColor}
-                  onUpdateQuantity={updateQuantity}
-                />
-              )
-          )}
+              );
+            });
+          })()}
         </div>
 
         {submitSuccess && (
