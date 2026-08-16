@@ -7,6 +7,7 @@ import {
   getProducts,
   getProductColors,
   getProductSizes,
+  getSizes,
   createOrder,
   DELIVERY_LABELS,
   type Category,
@@ -39,8 +40,15 @@ export const QuickBuyPage: FC = () => {
   const navigate = useNavigate();
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<ProductWithRelations[]>([]);
+  const [sizes, setSizes] = useState<Size[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
+  const [selectedSize, setSelectedSize] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+
+  const handleSelectCategory = useCallback((categoryId: number | null, sizeId?: number | null) => {
+    setSelectedCategory(categoryId);
+    setSelectedSize(sizeId ?? null);
+  }, []);
   const [selectedItems, setSelectedItems] = useState<Map<string, SelectedItem>>(new Map());
   const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>('in_person');
   const [loading, setLoading] = useState(true);
@@ -49,6 +57,7 @@ export const QuickBuyPage: FC = () => {
 
   useEffect(() => {
     getCategories().then((res) => setCategories(res.categories)).catch(() => {});
+    getSizes().then((res) => setSizes(res.items)).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -183,8 +192,10 @@ export const QuickBuyPage: FC = () => {
       <div className="quickbuy-page">
         <FilterBar
           categories={categories}
+          sizes={sizes}
           selectedCategory={selectedCategory}
-          onSelectCategory={setSelectedCategory}
+          selectedSize={selectedSize}
+          onSelectCategory={handleSelectCategory}
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
         />

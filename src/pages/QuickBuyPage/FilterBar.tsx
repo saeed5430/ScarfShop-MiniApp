@@ -53,17 +53,31 @@ export const FilterBar: FC<FilterBarProps> = ({
     (cat) => cat.name.trim() === 'روسری'
   );
 
-  // فقط سایزهایی که مقدارشان کاملاً عددی است
-  const numericSizes = sizes.filter((size) => {
-    const value = size.dimensions.trim();
+  // استخراج سایزهای عددی تکی از dimensions (مثل 100 از 100-130، و 130 از 130)
+  const extractSizes = (dimensions: string): { value: string; originalId: number }[] => {
+    const parts = dimensions.split('-').map((p) => p.trim());
+    return parts
+      .filter((p) => /^\d+$/.test(p))
+      .map((p) => ({ value: p, originalId: 0 }));
+  };
 
-    return /^\d+$/.test(value);
+  const sizeEntries: { value: string; size: Size }[] = [];
+  sizes.forEach((size) => {
+    const extracted = extractSizes(size.dimensions);
+    if (extracted.length > 0) {
+      extracted.forEach((e) => sizeEntries.push({ value: e.value, size }));
+    }
   });
 
-  // اگر روسری وجود داشته باشد و حداقل یک سایز عددی داشته باشیم،
+  // یکتا کردن بر اساس value (100, 130)
+  const uniqueSizes = sizeEntries.filter(
+    (entry, index, self) => index === self.findIndex((e) => e.value === entry.value)
+  );
+
+  // اگر روسری وجود داشته باشد و حداقل یک سایز عددی تکی داشته باشیم،
   // دکمه روسری معمولی حذف می‌شود و دکمه‌های ترکیبی ساخته می‌شوند.
   const shouldCreateScarfFilters =
-    !!scarfCategory && numericSizes.length > 0;
+    !!scarfCategory && uniqueSizes.length > 0;
 
   const normalCategories = categories.filter(
     (cat) =>
@@ -74,17 +88,9 @@ export const FilterBar: FC<FilterBarProps> = ({
       )
   );
 
-  // برای مثال:
-  // 100
-  // 130
-  //
-  // تبدیل می‌شود به:
-  // روسری130
-  // روسری100
-  //
-  // بنابراین سایزها را برعکس نمایش می‌دهیم.
+  // نمایش برعکس (130 اول، بعد 100)
   const scarfSizeFilters = shouldCreateScarfFilters
-    ? [...numericSizes].reverse()
+    ? [...uniqueSizes].sort((a, b) => Number(b.value) - Number(a.value))
     : [];
 
   return (
@@ -115,23 +121,23 @@ export const FilterBar: FC<FilterBarProps> = ({
           </button>
         ))}
 
-        {/* فیلترهای ترکیبی روسری + سایز */}
-        {scarfSizeFilters.map((size) => (
+        {/* فیلترهای ترکیبی Росری + سایز */}
+        {scarfSizeFilters.map((entry) => (
           <button
-            key={`scarf-size-${size.id}`}
+            key={`scarf-size-${entry.value}`}
             className={`filter-tab ${
               selectedCategory === scarfCategory?.id &&
-              selectedSize === size.id
+              selectedSize === entry.size.id
                 ? 'active'
                 : ''
             }`}
             onClick={() =>
               scarfCategory &&
-              onSelectCategory(scarfCategory.id, size.id)
+              onSelectCategory(scarfCategory.id, entry.size.id)
             }
           >
             {scarfCategory?.name}
-            {size.dimensions}
+            {entry.value}
           </button>
         ))}
       </div>
