@@ -5,9 +5,9 @@ import './FilterBar.css';
 
 interface FilterBarProps {
   categories: Category[];
-  sizes: Size[];
+  sizes?: Size[];
   selectedCategory: number | null;
-  selectedSize: number | null;
+  selectedSize?: number | null;
   onSelectCategory: (categoryId: number | null, sizeId?: number | null) => void;
   searchQuery: string;
   onSearchChange: (query: string) => void;
@@ -15,7 +15,7 @@ interface FilterBarProps {
 
 export const FilterBar: FC<FilterBarProps> = ({
   categories,
-  sizes,
+  sizes = [],
   selectedCategory,
   selectedSize,
   onSelectCategory,
