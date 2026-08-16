@@ -18,7 +18,7 @@ export class OrderTelegramDB {
 
   async addMessage(orderId: number, chatId: string, messageId: number): Promise<void> {
     await this.db.prepare(`
-      INSERT INTO order_telegram_messages (order_id, telegram_chat_id, telegram_message_id)
+      INSERT INTO telegram_order_messages (order_id, telegram_chat_id, telegram_message_id)
       VALUES (?, ?, ?)
       ON CONFLICT(order_id, telegram_chat_id) DO UPDATE SET telegram_message_id = excluded.telegram_message_id
     `).bind(orderId, chatId, messageId).run();
@@ -26,7 +26,7 @@ export class OrderTelegramDB {
 
   async listMessages(orderId: number): Promise<TelegramOrderMessage[]> {
     const { results } = await this.db.prepare(
-      'SELECT order_id, telegram_chat_id, telegram_message_id FROM order_telegram_messages WHERE order_id = ?'
+      'SELECT order_id, telegram_chat_id, telegram_message_id FROM telegram_order_messages WHERE order_id = ?'
     ).bind(orderId).all();
     return results.map((row) => ({
       order_id: Number(row.order_id),

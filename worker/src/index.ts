@@ -35,6 +35,7 @@ let migrationsDone = false;
 app.use('/api/*', cors({
   origin: [
     'https://scarf-admin.pages.dev',
+    'https://master.scarf-admin.pages.dev',
     'https://saeed5430.github.io',
     'http://localhost:3000',
   ],

@@ -67,7 +67,7 @@ async function getOrderItems(db: D1Database, orderId: number): Promise<EnrichedO
 
 export async function updateAdminMessages(db: D1Database, token: string, order: Order): Promise<void> {
   const database = new Database(db);
-  const customer = await database.customers.findById(order.user_id);
+  const customer = await database.customers.findById(order.customer_id);
   if (!customer) return;
   const items = await getOrderItems(db, order.id);
   const text = formatOrderMessage(order.id, customer, items, {
@@ -109,7 +109,7 @@ async function deliverReceiptToCustomer(
   if (!mediaResponse.ok) return false;
   const file = await mediaResponse.blob();
   const form = new FormData();
-  form.set('chat_id', order.user_id);
+  form.set('chat_id', order.customer_id);
   form.set('caption', caption);
   form.set(type === 'photo' ? 'photo' : 'voice', file, fileData.result.file_path.split('/').at(-1) || `order-${order.id}`);
   const sendResponse = await fetch(`https://api.telegram.org/bot${miniAppBotToken}/${type === 'photo' ? 'sendPhoto' : 'sendVoice'}`, {
@@ -122,7 +122,7 @@ async function deliverReceiptToCustomer(
   if (type === 'photo') {
     await sendMessage(
       miniAppBotToken,
-      Number(order.user_id),
+      Number(order.customer_id),
       'لطفاً تصویر فیش واریزی را برای @abdollahisz ارسال کنید.'
     );
   }

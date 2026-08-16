@@ -22,6 +22,9 @@ import { ColorList, ColorCreate, ColorEdit } from "./pages/colors";
 import { SizeList, SizeCreate, SizeEdit } from "./pages/sizes";
 import { DesignList, DesignCreate, DesignEdit } from "./pages/designs";
 import { UserList } from "./pages/users";
+import { BaleUserList } from "./pages/bale-users";
+import { BaleChatsList } from "./pages/bale-chats";
+import { BalePage } from "./pages/bale";
 import { AdminList, AdminCreate, AdminEdit } from "./pages/admins";
 import { OrderList, OrderShow } from "./pages/orders";
 import { SettingsPage } from "./pages/settings";
@@ -50,9 +53,12 @@ function App() {
               { name: "sizes", list: "/sizes", create: "/sizes/create", edit: "/sizes/edit/:id", meta: { label: "سایزها" } },
               { name: "designs", list: "/designs", create: "/designs/create", edit: "/designs/edit/:id", meta: { label: "طرح‌ها" } },
               { name: "users", list: "/users", meta: { label: "کاربران" } },
+              { name: "bale-customers", list: "/bale-users", meta: { label: "کاربران بله" } },
+              { name: "bale-chats", list: "/bale-chats", meta: { label: "مکالمات بله" } },
               { name: "admins", list: "/admins", create: "/admins/create", edit: "/admins/edit/:id", meta: { label: "ادمین‌ها" } },
               { name: "orders", list: "/orders", show: "/orders/show/:id", meta: { label: "سفارشات" } },
-              { name: "telegram", list: "/telegram", meta: { label: "ارسال شخصی" } },
+              { name: "telegram", list: "/telegram", meta: { label: "ارسال شخصی تلگرام" } },
+              { name: "bale", list: "/bale", meta: { label: "ارسال شخصی بله" } },
               { name: "settings", list: "/settings", meta: { label: "تنظیمات" } },
             ]}
             options={{
@@ -81,9 +87,12 @@ function App() {
                 <Route path="/sizes"><Route index element={<SizeList />} /><Route path="create" element={<SizeCreate />} /><Route path="edit/:id" element={<SizeEdit />} /></Route>
                 <Route path="/designs"><Route index element={<DesignList />} /><Route path="create" element={<DesignCreate />} /><Route path="edit/:id" element={<DesignEdit />} /></Route>
                 <Route path="/users"><Route index element={<UserList />} /></Route>
+                <Route path="/bale-users"><Route index element={<BaleUserList />} /></Route>
+                <Route path="/bale-chats"><Route index element={<BaleChatsList />} /></Route>
                 <Route path="/admins"><Route index element={<AdminList />} /><Route path="create" element={<AdminCreate />} /><Route path="edit/:id" element={<AdminEdit />} /></Route>
                 <Route path="/orders"><Route index element={<OrderList />} /><Route path="show/:id" element={<OrderShow />} /></Route>
                 <Route path="/telegram"><Route index element={<TelegramPage />} /></Route>
+                <Route path="/bale"><Route index element={<BalePage />} /></Route>
                 <Route path="/settings"><Route index element={<SettingsPage />} /></Route>
               </Route>
               <Route path="*" element={<ErrorComponent />} />

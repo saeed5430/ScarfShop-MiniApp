@@ -1,7 +1,7 @@
 import type { D1Database } from '@cloudflare/workers-types';
 import type { Chat } from './types';
 
-export class ChatsDB {
+export class BaleChatsDB {
   constructor(private db: D1Database) {}
 
   async addMessage(input: {
@@ -11,7 +11,7 @@ export class ChatsDB {
     ai_connected?: boolean;
   }): Promise<Chat> {
     const stmt = this.db.prepare(`
-      INSERT INTO telegram_chats (customer_id, message, sender_type, ai_connected)
+      INSERT INTO bale_chats (customer_id, message, sender_type, ai_connected)
       VALUES (?, ?, ?, ?)
     `);
 
@@ -27,14 +27,14 @@ export class ChatsDB {
   }
 
   async findById(id: number): Promise<Chat | null> {
-    const stmt = this.db.prepare('SELECT * FROM telegram_chats WHERE id = ?');
+    const stmt = this.db.prepare('SELECT * FROM bale_chats WHERE id = ?');
     const row = await stmt.bind(id).first<Chat>();
     return row ?? null;
   }
 
   async findByCustomerId(customerId: string, limit = 50, offset = 0): Promise<Chat[]> {
     const stmt = this.db.prepare(`
-      SELECT * FROM telegram_chats
+      SELECT * FROM bale_chats
       WHERE customer_id = ?
       ORDER BY timestamp DESC
       LIMIT ? OFFSET ?
@@ -45,7 +45,7 @@ export class ChatsDB {
 
   async getConversation(customerId: string, limit = 20): Promise<Chat[]> {
     const stmt = this.db.prepare(`
-      SELECT * FROM telegram_chats
+      SELECT * FROM bale_chats
       WHERE customer_id = ?
       ORDER BY timestamp ASC
       LIMIT ?
@@ -57,7 +57,7 @@ export class ChatsDB {
   async getRecentMessages(customerId: string, count = 10): Promise<Chat[]> {
     const stmt = this.db.prepare(`
       SELECT * FROM (
-        SELECT * FROM telegram_chats
+        SELECT * FROM bale_chats
         WHERE customer_id = ?
         ORDER BY timestamp DESC
         LIMIT ?
@@ -68,20 +68,20 @@ export class ChatsDB {
   }
 
   async countByCustomerId(customerId: string): Promise<number> {
-    const stmt = this.db.prepare('SELECT COUNT(*) as count FROM telegram_chats WHERE customer_id = ?');
+    const stmt = this.db.prepare('SELECT COUNT(*) as count FROM bale_chats WHERE customer_id = ?');
     const result = await stmt.bind(customerId).first<{ count: number }>();
     return result?.count ?? 0;
   }
 
   async deleteByCustomerId(customerId: string): Promise<number> {
-    const stmt = this.db.prepare('DELETE FROM telegram_chats WHERE customer_id = ?');
+    const stmt = this.db.prepare('DELETE FROM bale_chats WHERE customer_id = ?');
     const result = await stmt.bind(customerId).run();
     return result.meta.changes;
   }
 
   async deleteOlderThan(days = 30): Promise<number> {
     const stmt = this.db.prepare(`
-      DELETE FROM telegram_chats WHERE timestamp < unixepoch() - ? * 86400
+      DELETE FROM bale_chats WHERE timestamp < unixepoch() - ? * 86400
     `);
     const result = await stmt.bind(days).run();
     return result.meta.changes;

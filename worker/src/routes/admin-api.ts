@@ -87,7 +87,10 @@ adminApiRoutes.get('/orders', async (c) => {
   if (!db) return c.json({ error: 'Database not configured' }, 500);
 
   const database = new Database(db);
-  const orders = await database.orders.list();
+  const platform = c.req.query('platform');
+  const orders = platform === 'bale' || platform === 'telegram'
+    ? await database.orders.listByPlatform(platform)
+    : await database.orders.list();
 
   return c.json({ orders, total: orders.length });
 });
@@ -189,7 +192,7 @@ adminApiRoutes.delete('/orders/:id', async (c) => {
   }
 });
 
-// Admin Customers
+// Admin Customers (Telegram)
 adminApiRoutes.get('/customers', async (c) => {
   const db = c.env.DB;
   if (!db) return c.json({ error: 'Database not configured' }, 500);
@@ -200,13 +203,35 @@ adminApiRoutes.get('/customers', async (c) => {
   return c.json({ customers, total: customers.length });
 });
 
-// Admin Chats
+// Admin Chats (Telegram)
 adminApiRoutes.get('/chats/:customerId', async (c) => {
   const db = c.env.DB;
   if (!db) return c.json({ error: 'Database not configured' }, 500);
 
   const database = new Database(db);
   const messages = await database.chats.findByCustomerId(c.req.param('customerId'));
+
+  return c.json({ messages });
+});
+
+// Admin Bale Customers
+adminApiRoutes.get('/bale/customers', async (c) => {
+  const db = c.env.DB;
+  if (!db) return c.json({ error: 'Database not configured' }, 500);
+
+  const database = new Database(db);
+  const customers = await database.baleCustomers.list();
+
+  return c.json({ customers, total: customers.length });
+});
+
+// Admin Bale Chats
+adminApiRoutes.get('/bale/chats/:customerId', async (c) => {
+  const db = c.env.DB;
+  if (!db) return c.json({ error: 'Database not configured' }, 500);
+
+  const database = new Database(db);
+  const messages = await database.baleChats.findByCustomerId(c.req.param('customerId'));
 
   return c.json({ messages });
 });

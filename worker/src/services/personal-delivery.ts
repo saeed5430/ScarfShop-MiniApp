@@ -54,8 +54,8 @@ export async function sendReceiptViaPersonal(
     const account = await database.telegramAccounts.get(adminTelegramId);
     if (!account || !account.personal_sending_enabled || account.status !== 'connected') return false;
 
-    const customer = await database.customers.findById(order.user_id);
-    const target = customer ? targetForCustomer(customer.username, order.user_id) : order.user_id;
+    const customer = await database.customers.findById(order.customer_id);
+    const target = customer ? targetForCustomer(customer.username, order.customer_id) : order.customer_id;
     const caption = kind === 'photo'
       ? `🧾 فاکتور سفارش #${order.id}`
       : `🎙️ توضیحات سفارش #${order.id}`;
@@ -89,8 +89,8 @@ export async function sendTextViaPersonal(
     const account = await database.telegramAccounts.get(adminTelegramId);
     if (!account || !account.personal_sending_enabled || account.status !== 'connected') return false;
 
-    const customer = await database.customers.findById(order.user_id);
-    const target = customer ? targetForCustomer(customer.username, order.user_id) : order.user_id;
+    const customer = await database.customers.findById(order.customer_id);
+    const target = customer ? targetForCustomer(customer.username, order.customer_id) : order.customer_id;
     await serviceRequest(env, adminTelegramId, '/api/send', {
       method: 'POST',
       body: JSON.stringify({ kind: 'text', target, text }),

@@ -12,7 +12,8 @@ export class OrdersDB {
   private parseRow(row: Record<string, unknown>): Order {
     return {
       id: Number(row.id),
-      user_id: String(row.user_id),
+      customer_id: String(row.customer_id),
+      platform: (row.platform as 'telegram' | 'bale') ?? 'telegram',
       payment_status: row.payment_status as 'pending' | 'paid',
       delivery_method: row.delivery_method != null ? String(row.delivery_method) as 'in_person' | 'tipax' | 'carrier' : null,
       notes: row.notes != null ? String(row.notes) : null,
@@ -33,10 +34,11 @@ export class OrdersDB {
   async create(input: CreateOrderInput): Promise<Order> {
     const now = nowJalali();
     const result = await this.db.prepare(`
-      INSERT INTO orders (user_id, payment_status, delivery_method, notes, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO orders (customer_id, platform, payment_status, delivery_method, notes, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
     `).bind(
-      input.user_id,
+      input.customer_id,
+      input.platform ?? 'telegram',
       input.payment_status ?? 'pending',
       input.delivery_method ?? null,
       input.notes ?? null,
@@ -59,10 +61,17 @@ export class OrdersDB {
     return results.map((r) => this.parseRow(r));
   }
 
-  async listByUser(userId: string): Promise<Order[]> {
+  async listByPlatform(platform: 'telegram' | 'bale', limit = 50, offset = 0): Promise<Order[]> {
     const { results } = await this.db.prepare(
-      'SELECT * FROM orders WHERE user_id = ? ORDER BY created_at DESC'
-    ).bind(userId).all();
+      'SELECT * FROM orders WHERE platform = ? ORDER BY created_at DESC LIMIT ? OFFSET ?'
+    ).bind(platform, limit, offset).all();
+    return results.map((r) => this.parseRow(r));
+  }
+
+  async listByCustomer(customerId: string): Promise<Order[]> {
+    const { results } = await this.db.prepare(
+      'SELECT * FROM orders WHERE customer_id = ? ORDER BY created_at DESC'
+    ).bind(customerId).all();
     return results.map((r) => this.parseRow(r));
   }
 

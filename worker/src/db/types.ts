@@ -212,7 +212,8 @@ export type DeliveryMethod = 'in_person' | 'tipax' | 'carrier';
 
 export interface Order {
   id: number;
-  user_id: string;
+  customer_id: string;
+  platform: 'telegram' | 'bale';
   payment_status: 'pending' | 'paid';
   delivery_method: DeliveryMethod | null;
   notes: string | null;
@@ -230,7 +231,8 @@ export interface Order {
 }
 
 export interface CreateOrderInput {
-  user_id: string;
+  customer_id: string;
+  platform?: 'telegram' | 'bale';
   payment_status?: 'pending' | 'paid';
   delivery_method?: DeliveryMethod | null;
   notes?: string;

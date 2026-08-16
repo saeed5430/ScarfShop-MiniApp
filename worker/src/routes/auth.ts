@@ -68,9 +68,9 @@ authRoutes.get('/is-admin', async (c) => {
   if (!result.valid) return c.json({ is_admin: false });
 
   const database = new Database(db);
-  const isAdmin = await database.admins.isAdmin(result.customer_id!);
+  const admin = await database.admins.findByCustomerId(result.customer_id!);
 
-  return c.json({ is_admin: isAdmin });
+  return c.json({ is_admin: admin !== null });
 });
 
 // Update customer profile

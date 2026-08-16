@@ -43,6 +43,8 @@ const resourceMap: Record<string, { path: string; key: string }> = {
   designs: { path: "/api/admin/designs", key: "items" },
   users: { path: "/api/admin/customers", key: "customers" },
   customers: { path: "/api/admin/customers", key: "customers" },
+  "bale-customers": { path: "/api/admin/bale/customers", key: "customers" },
+  "bale-chats": { path: "/api/admin/bale/chats", key: "messages" },
   admins: { path: "/api/admin/admins", key: "admins" },
   orders: { path: "/api/admin/orders", key: "orders" },
   coupons: { path: "/api/admin/coupons", key: "coupons" },

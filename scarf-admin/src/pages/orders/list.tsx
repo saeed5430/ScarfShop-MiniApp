@@ -15,6 +15,8 @@ const deliveryLabels: Record<string, string> = {
   tipax: "تیپاکس",
   carrier: "باربری",
 };
+const platformColors: Record<string, string> = { telegram: "blue", bale: "volcano" };
+const platformLabels: Record<string, string> = { telegram: "تلگرام", bale: "بله" };
 
 export const OrderList: React.FC = () => {
   const { tableProps } = useTable();
@@ -52,7 +54,8 @@ export const OrderList: React.FC = () => {
         mobileCardSubtitle={(record) => `${record.item_count ?? 0} ردیف — ${record.payment_status === 'paid' ? 'پرداخت شده' : 'پرداخت نشده'}`}
         columns={[
           { key: "id", title: "ID", dataIndex: "id", width: 60 },
-          { key: "user_id", title: "مشتری", dataIndex: "user_id" },
+          { key: "platform", title: "پلتفرم", dataIndex: "platform", width: 90, render: (v: string) => <Tag color={platformColors[v] ?? "default"}>{platformLabels[v] ?? v}</Tag> },
+          { key: "customer_id", title: "مشتری", dataIndex: "customer_id" },
           { key: "item_count", title: "اقلام", dataIndex: "item_count", width: 80, render: (v: number) => <span style={{ fontWeight: 600, color: "#7C3AED" }}>{v ?? 0}</span> },
           { key: "delivery_method", title: "تحویل", dataIndex: "delivery_method", width: 100, render: (v: string | null) => v ? <Tag color="purple">{deliveryLabels[v] ?? v}</Tag> : <Tag>—</Tag> },
           { key: "payment_status", title: "پرداخت", dataIndex: "payment_status", render: (v: string) => <Tag color={paymentColors[v]}>{paymentLabels[v]}</Tag> },

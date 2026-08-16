@@ -745,7 +745,7 @@ apiRoutes.get('/my-orders', requireCustomer, async (c) => {
   if (!session.valid || !session.customer_id) return c.json({ error: 'Token required' }, 401);
 
   const database = new Database(db);
-  const orders = await database.orders.listByUser(session.customer_id);
+  const orders = await database.orders.listByCustomer(session.customer_id);
   const totalOrders = orders.length;
 
   const enriched = await Promise.all(orders.map(async (order, index) => {
@@ -768,7 +768,7 @@ apiRoutes.get('/my-orders', requireCustomer, async (c) => {
     return {
       id: order.id,
       customer_order_number: totalOrders - index,
-      user_id: order.user_id,
+      customer_id: order.customer_id,
       delivery_method: order.delivery_method,
       notes: order.notes,
       receipt_file_type: order.receipt_file_type,
@@ -794,7 +794,7 @@ apiRoutes.get('/my-orders/:id/receipt', requireCustomer, async (c) => {
   const session = await validateSession(db, token);
   if (!session.valid || !session.customer_id) return c.json({ error: 'Token required' }, 401);
   const order = await new Database(db).orders.getById(Number(c.req.param('id')));
-  if (!order || order.user_id !== session.customer_id) return c.json({ error: 'Not found' }, 404);
+  if (!order || order.customer_id !== session.customer_id) return c.json({ error: 'Not found' }, 404);
 
   const requestedType = c.req.query('type');
   const fileType = requestedType === 'voice' ? 'voice' : requestedType === 'invoice' ? 'photo' : order.receipt_file_type;
@@ -866,7 +866,8 @@ apiRoutes.post('/orders', requireCustomer, async (c) => {
   // Ensure user can only create orders for themselves
   const orderData = {
     ...body,
-    user_id: customerId,
+    customer_id: customerId,
+    platform: 'telegram' as const,
     delivery_method: deliveryMethod,
   };
 
