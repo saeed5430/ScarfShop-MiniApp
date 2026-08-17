@@ -425,7 +425,14 @@ function SortableRow<T extends Record<string, any>>({
       <div
         {...attributes}
         {...listeners}
-        style={{ width: 40, textAlign: "center", cursor: "grab", color: "#999" }}
+        style={{
+          width: 40,
+          textAlign: "center",
+          color: "#999",
+          flexShrink: 0,
+          cursor: isDragging ? "grabbing" : "grab",
+          touchAction: "none",
+        }}
       >
         <HolderOutlined />
       </div>
@@ -525,7 +532,14 @@ function SortableCard<T extends Record<string, any>>({
           <div
             {...attributes}
             {...listeners}
-            style={{ cursor: "grab", color: "#999", paddingTop: 2 }}
+            style={{
+              cursor: isDragging ? "grabbing" : "grab",
+              color: "#999",
+              padding: 10,
+              margin: -4,
+              flexShrink: 0,
+              touchAction: "none",
+            }}
           >
             <HolderOutlined />
           </div>

@@ -35,6 +35,68 @@ export interface SelectedItem {
   quantity: number;
 }
 
+export interface DisplayItem {
+  pwr: ProductWithRelations;
+  displaySize: Size | null;
+}
+
+function sizeValue(size: Size): number {
+  const n = parseFloat(size.dimensions);
+  return Number.isNaN(n) ? -Infinity : n;
+}
+
+// Expand products into display rows grouped by size (largest first),
+// preserving the base drag order (sort_order). Multi-size products appear
+// once per size (biggest first, then smaller); single-size products appear
+// once at their drag-order position.
+function buildDisplayItems(products: ProductWithRelations[]): DisplayItem[] {
+  if (products.length === 0) return [];
+
+  let maxVal = -Infinity;
+  for (const pwr of products) {
+    for (const s of pwr.sizes) {
+      const v = sizeValue(s);
+      if (v > maxVal) maxVal = v;
+    }
+  }
+
+  const result: DisplayItem[] = [];
+
+  // Pass 1: base drag order. Big-size variants, or the product once if it
+  // has no big size (single-size products).
+  for (const pwr of products) {
+    const big = pwr.sizes.find((s) => sizeValue(s) === maxVal);
+    if (big) {
+      result.push({ pwr, displaySize: big });
+    } else {
+      result.push({ pwr, displaySize: pwr.sizes[0] ?? null });
+    }
+  }
+
+  // Pass 2+: remaining sizes in descending order, only for products that
+  // also have the big size (so single-size products are not duplicated).
+  const otherVals = Array.from(
+    new Set(
+      products.flatMap((pwr) => pwr.sizes.map((s) => sizeValue(s)))
+    )
+  )
+    .filter((v) => v !== maxVal)
+    .sort((a, b) => b - a);
+
+  for (const v of otherVals) {
+    for (const pwr of products) {
+      const big = pwr.sizes.find((s) => sizeValue(s) === maxVal);
+      if (!big) continue;
+      const match = pwr.sizes.find((s) => sizeValue(s) === v);
+      if (match) {
+        result.push({ pwr, displaySize: match });
+      }
+    }
+  }
+
+  return result;
+}
+
 export const QuickBuyPage: FC = () => {
   const { customer } = useAuth();
   const navigate = useNavigate();
@@ -228,33 +290,40 @@ export const QuickBuyPage: FC = () => {
             </div>
           )}
 
-{!loading && (() => {
+ {!loading && (() => {
             // اگر سایز انتخاب شده است، فقط محصولاتی که آن سایز را دارند را نمایش بده
             // و برای هر محصول فقط یک کارت با آن سایز خاص بساز
-            const filteredProducts = selectedSize
-              ? products.filter((pwr) =>
-                  pwr.sizes.some((s) => s.id === selectedSize)
-                )
-              : products;
-
-            return filteredProducts.map((pwr) => {
-              const size = selectedSize
-                ? pwr.sizes.find((s) => s.id === selectedSize) ?? null
-                : pwr.sizes.length > 0
-                  ? pwr.sizes[0]
-                  : null;
-
-              return (
-                <ProductCard
-                  key={selectedSize ? `${pwr.product.id}-${size?.id}` : pwr.product.id}
-                  productWithRelations={pwr}
-                  selectedSize={size}
-                  selectedItems={selectedItems}
-                  onToggleColor={toggleColor}
-                  onUpdateQuantity={updateQuantity}
-                />
+            if (selectedSize) {
+              const filtered = products.filter((pwr) =>
+                pwr.sizes.some((s) => s.id === selectedSize)
               );
-            });
+              return filtered.map((pwr) => {
+                const size = pwr.sizes.find((s) => s.id === selectedSize) ?? null;
+                return (
+                  <ProductCard
+                    key={`${pwr.product.id}-${size?.id}`}
+                    productWithRelations={pwr}
+                    selectedSize={size}
+                    selectedItems={selectedItems}
+                    onToggleColor={toggleColor}
+                    onUpdateQuantity={updateQuantity}
+                  />
+                );
+              });
+            }
+
+            // نمایش پیش‌فرض: باز کردن محصولات چندسایز بر اساس سایز (بزرگ‌تر اول)
+            const displayItems = buildDisplayItems(products);
+            return displayItems.map((item) => (
+              <ProductCard
+                key={`${item.pwr.product.id}-${item.displaySize?.id ?? 'none'}`}
+                productWithRelations={item.pwr}
+                selectedSize={item.displaySize}
+                selectedItems={selectedItems}
+                onToggleColor={toggleColor}
+                onUpdateQuantity={updateQuantity}
+              />
+            ));
           })()}
         </div>
 

@@ -49,7 +49,11 @@ export const ProductCard: FC<ProductCardProps> = ({
     return null;
   }, [product.images]);
 
-  const displayName = [category?.name, product.name].filter(Boolean).join(' ');
+  const displayName = [
+    category?.name,
+    product.name,
+    product.size_count > 1 && selectedSize ? selectedSize.dimensions : null,
+  ].filter(Boolean).join(' ');
 
   const colorCells = useMemo(() => {
     if (!selectedSize) return [];
