@@ -104,6 +104,7 @@ export interface Product {
   images: string[];
   is_stock: boolean;
   sku: string | null;
+  sort_order: number;
   created_at: string;
   updated_at: string;
 }
@@ -119,6 +120,7 @@ export interface CreateProductInput {
   images?: string[];
   is_stock?: boolean;
   sku?: string;
+  sort_order?: number;
 }
 
 export interface UpdateProductInput {
@@ -132,6 +134,12 @@ export interface UpdateProductInput {
   images?: string[];
   is_stock?: boolean;
   sku?: string;
+  sort_order?: number;
+}
+
+export interface ReorderProductItem {
+  id: number;
+  sort_order: number;
 }
 
 // Designs (standalone - no FK to products)

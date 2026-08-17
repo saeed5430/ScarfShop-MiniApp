@@ -255,6 +255,33 @@ apiRoutes.get('/products', async (c) => {
   return c.json({ items: enriched, total: enriched.length });
 });
 
+// Reorder active products (manual drag & drop from Admin)
+apiRoutes.put('/products/reorder', requireAdmin, async (c) => {
+  const db = c.env.DB;
+  if (!db) return c.json({ error: 'Database not configured' }, 500);
+
+  const body = await c.req.json<{ items?: { id: number; sort_order: number }[] }>().catch(() => ({ items: undefined }));
+  const items = body.items;
+
+  if (!Array.isArray(items) || items.length === 0) {
+    return c.json({ error: 'items is required' }, 400);
+  }
+
+  // Only accept numeric ids and sort_order values.
+  const cleanItems = items
+    .filter((it) => Number.isFinite(Number(it?.id)) && Number.isFinite(Number(it?.sort_order)))
+    .map((it) => ({ id: Number(it.id), sort_order: Number(it.sort_order) }));
+
+  if (cleanItems.length === 0) {
+    return c.json({ error: 'No valid items' }, 400);
+  }
+
+  const database = new Database(db);
+  await database.products.reorder(cleanItems);
+
+  return c.json({ success: true, updated: cleanItems.length });
+});
+
 apiRoutes.get('/products/:id', async (c) => {
   const db = c.env.DB;
   if (!db) return c.json({ error: 'Database not configured' }, 500);

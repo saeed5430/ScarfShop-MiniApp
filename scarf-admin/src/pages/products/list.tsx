@@ -1,26 +1,85 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useTable } from "@refinedev/antd";
-import { useDelete, useUpdate } from "@refinedev/core";
+import { useDelete, useUpdate, useInvalidate } from "@refinedev/core";
 import { CreateButton, List } from "@refinedev/antd";
 import { useNavigate } from "react-router-dom";
 import { ResponsiveTable } from "../../components/ResponsiveTable";
 import { ConfirmDeleteModal } from "../../components/ConfirmDeleteModal";
-import { message, Tag, Typography, Image, Button, Switch, Card } from "antd";
+import { message, Tag, Typography, Image, Button, Switch, Card, Space } from "antd";
 import { DeleteOutlined, UndoOutlined } from "@ant-design/icons";
 
 const { Text } = Typography;
 
+const API_URL = "https://scarf-mini-app.abdollahi003.workers.dev";
+
 export const ProductList: React.FC = () => {
-  const { tableProps } = useTable();
+  const { tableProps } = useTable({ pagination: { pageSize: 1000 } });
   const { mutate: remove } = useDelete();
   const { mutate: update } = useUpdate();
+  const invalidate = useInvalidate();
   const navigate = useNavigate();
   const [deleteTarget, setDeleteTarget] = useState<any>(null);
   const [deleting, setDeleting] = useState(false);
+  const [savingOrder, setSavingOrder] = useState(false);
 
   const allProducts = (tableProps.dataSource || []) as any[];
   const activeProducts = allProducts.filter((p) => p.is_active);
   const deletedProducts = allProducts.filter((p) => !p.is_active);
+
+  // Local order for drag & drop (only active products). No API is called on drag.
+  const [displayProducts, setDisplayProducts] = useState<any[]>([]);
+  const [savedIds, setSavedIds] = useState<number[]>([]);
+
+  useEffect(() => {
+    const ids = activeProducts.map((p) => p.id);
+    // Only reset when the underlying set of products changed (avoid clobbering a pending drag).
+    setDisplayProducts((prev) => {
+      const prevIds = prev.map((p) => p.id);
+      const sameSet =
+        ids.length === prevIds.length && ids.every((id) => prevIds.includes(id));
+      return sameSet ? prev : activeProducts;
+    });
+    setSavedIds(ids);
+  }, [tableProps.dataSource]);
+
+  const currentIds = displayProducts.map((p) => p.id);
+  const hasOrderChanges =
+    JSON.stringify(currentIds) !== JSON.stringify(savedIds);
+
+  const handleReorder = (newList: any[]) => {
+    setDisplayProducts(newList);
+  };
+
+  const handleSaveOrder = async () => {
+    if (!hasOrderChanges) return;
+    setSavingOrder(true);
+    try {
+      const items = displayProducts.map((p, index) => ({
+        id: p.id,
+        sort_order: index,
+      }));
+
+      const token = localStorage.getItem("admin_token");
+      const res = await fetch(`${API_URL}/api/products/reorder`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ items }),
+      });
+
+      if (!res.ok) throw new Error("failed");
+
+      setSavedIds(displayProducts.map((p) => p.id));
+      message.success("ترتیب محصولات با موفقیت ذخیره شد");
+      invalidate({ resource: "products", invalidates: ["list"] });
+    } catch {
+      message.error("خطا در ذخیره ترتیب محصولات");
+    } finally {
+      setSavingOrder(false);
+    }
+  };
 
   const handleDelete = () => {
     if (!deleteTarget) return;
@@ -150,11 +209,30 @@ export const ProductList: React.FC = () => {
 
   return (
     <div>
-      <List headerProps={{ title: "محصولات", extra: <CreateButton /> }}>
+      <List
+        headerProps={{
+          title: "محصولات",
+          extra: (
+            <Space>
+              <Button
+                type="primary"
+                disabled={!hasOrderChanges}
+                loading={savingOrder}
+                onClick={handleSaveOrder}
+              >
+                ذخیره ترتیب
+              </Button>
+              <CreateButton />
+            </Space>
+          ),
+        }}
+      >
         <ResponsiveTable
-          dataSource={activeProducts}
+          dataSource={displayProducts}
           loading={!!tableProps.loading}
           rowKey="id"
+          sortable
+          onReorder={handleReorder}
           mobileCardTitle={mobileCardTitle}
           mobileCardSubtitle={mobileCardSubtitle}
           columns={columns}

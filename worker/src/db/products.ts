@@ -1,6 +1,6 @@
 import type { D1Database } from '@cloudflare/workers-types';
 import { nowJalali } from '../utils/date';
-import type { Product, CreateProductInput, UpdateProductInput } from './types';
+import type { Product, CreateProductInput, UpdateProductInput, ReorderProductItem } from './types';
 
 export class ProductsDB {
   private db: D1Database;
@@ -22,6 +22,7 @@ export class ProductsDB {
       images: JSON.parse(String(row.images || '[]')),
       is_stock: Boolean(row.is_stock),
       sku: row.sku != null ? String(row.sku) : null,
+      sort_order: Number(row.sort_order ?? 0),
       created_at: String(row.created_at),
       updated_at: String(row.updated_at),
     };
@@ -29,9 +30,14 @@ export class ProductsDB {
 
   async create(input: CreateProductInput): Promise<Product> {
     const now = nowJalali();
+
+    // New products are appended to the end of the manual order.
+    const maxRow = await this.db.prepare('SELECT MAX(sort_order) as m FROM products').first<{ m: number | null }>();
+    const nextOrder = (input.sort_order ?? (Number(maxRow?.m ?? -1) + 1));
+
     const result = await this.db.prepare(`
-      INSERT INTO products (name, category_id, slug, description, short_description, is_active, material, images, is_stock, sku, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO products (name, category_id, slug, description, short_description, is_active, material, images, is_stock, sku, sort_order, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       input.name,
       input.category_id,
@@ -43,6 +49,7 @@ export class ProductsDB {
       JSON.stringify(input.images || []),
       input.is_stock === false ? 0 : 1,
       input.sku ?? null,
+      nextOrder,
       now,
       now,
     ).run();
@@ -57,27 +64,27 @@ export class ProductsDB {
 
   async list(activeOnly: boolean = false): Promise<Product[]> {
     const query = activeOnly
-      ? 'SELECT * FROM products WHERE is_active = 1 ORDER BY created_at DESC'
-      : 'SELECT * FROM products ORDER BY created_at DESC';
+      ? 'SELECT * FROM products WHERE is_active = 1 ORDER BY sort_order ASC, id ASC'
+      : 'SELECT * FROM products ORDER BY sort_order ASC, id ASC';
     const { results } = await this.db.prepare(query).all();
     return results.map((r) => this.parseRow(r));
   }
 
   async listActive(): Promise<Product[]> {
-    const { results } = await this.db.prepare('SELECT * FROM products WHERE is_active = 1 ORDER BY created_at DESC').all();
+    const { results } = await this.db.prepare('SELECT * FROM products WHERE is_active = 1 ORDER BY sort_order ASC, id ASC').all();
     return results.map((r) => this.parseRow(r));
   }
 
   async listByCategory(categoryId: number): Promise<Product[]> {
     const { results } = await this.db.prepare(
-      'SELECT * FROM products WHERE category_id = ? AND is_active = 1 ORDER BY created_at DESC'
+      'SELECT * FROM products WHERE category_id = ? AND is_active = 1 ORDER BY sort_order ASC, id ASC'
     ).bind(categoryId).all();
     return results.map((r) => this.parseRow(r));
   }
 
   async search(query: string): Promise<Product[]> {
     const { results } = await this.db.prepare(
-      "SELECT * FROM products WHERE is_active = 1 AND (name LIKE ? OR description LIKE ? OR short_description LIKE ? OR slug LIKE ? OR sku LIKE ?) ORDER BY created_at DESC"
+      "SELECT * FROM products WHERE is_active = 1 AND (name LIKE ? OR description LIKE ? OR short_description LIKE ? OR slug LIKE ? OR sku LIKE ?) ORDER BY sort_order ASC, id ASC"
     ).bind(`%${query}%`, `%${query}%`, `%${query}%`, `%${query}%`, `%${query}%`).all();
     return results.map((r) => this.parseRow(r));
   }
@@ -116,6 +123,17 @@ export class ProductsDB {
   async restore(id: number): Promise<boolean> {
     const result = await this.db.prepare('UPDATE products SET is_active = 1, updated_at = ? WHERE id = ?').bind(nowJalali(), id).run();
     return (result.meta.changes ?? 0) > 0;
+  }
+
+  // Reorder active products. Runs all updates in a single D1 batch (atomic transaction).
+  async reorder(items: ReorderProductItem[]): Promise<void> {
+    if (!items.length) return;
+
+    const statements = items.map((item) =>
+      this.db.prepare('UPDATE products SET sort_order = ? WHERE id = ?').bind(item.sort_order, item.id)
+    );
+
+    await this.db.batch(statements);
   }
 
   async getColorCount(productId: number): Promise<number> {

@@ -360,4 +360,23 @@ export async function runMigrations(db: D1Database): Promise<void> {
       await db.prepare('CREATE INDEX IF NOT EXISTS idx_orders_platform ON orders(platform)').run();
     }
   }
+
+  // ------------------------------------------------------------------
+  // Products: add sort_order for manual drag & drop ordering
+  // ------------------------------------------------------------------
+  if (await tableExists(db, 'products')) {
+    if (!(await columnExists(db, 'products', 'sort_order'))) {
+      await db.prepare('ALTER TABLE products ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0').run();
+
+      // Initialize sort_order preserving the current display order (created_at DESC).
+      // Only runs once (right after the column is added, so all values are 0).
+      await db.prepare(`
+        WITH ordered AS (
+          SELECT id, (ROW_NUMBER() OVER (ORDER BY created_at DESC, id DESC) - 1) AS rn
+          FROM products
+        )
+        UPDATE products SET sort_order = (SELECT rn FROM ordered WHERE ordered.id = products.id)
+      `).run();
+    }
+  }
 }
