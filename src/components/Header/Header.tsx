@@ -7,7 +7,7 @@ export const Header: FC = () => {
   const { customer } = useAuth();
 
   const customerName = useMemo(() => {
-    return customer?.first_name ?? 'کاربر';
+    return customer?.last_name ?? 'کاربر';
   }, [customer]);
 
   const customerAvatar = useMemo(() => {
