@@ -1,46 +1,5 @@
-/* ============================================================
-   Scarf Mini App — Global Tokens
-   Based on plan/design-system.md. Dark mode via CSS variables
-   so every component switches seamlessly (design-system §18).
-   ============================================================ */
-:root {
-  /* Light theme */
-  --color-primary: #7C3AED;
-  --color-primary-strong: #6D28D9;
-  --color-secondary: #A78BFA;
-  --color-bg: #FAFAFA;
-  --color-surface: #FFFFFF;
-  --color-text: #111827;
-  --color-text-secondary: #6B7280;
-  --color-border: #E5E7EB;
-  --shadow-soft: 0 4px 12px rgba(0, 0, 0, 0.08);
-
-  /* Scrollbar (derived from tokens above) */
-  --scroll-size: 8px;
-  --scroll-radius: 20px;
-  --scroll-thumb: var(--color-primary);
-  --scroll-thumb-hover: var(--color-primary-strong);
-  --scroll-track: transparent;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-bg: #0E0E12;
-    --color-surface: #17171C;
-    --color-text: #F4F4F5;
-    --color-text-secondary: #A1A1AA;
-    --color-border: #27272A;
-    --shadow-soft: 0 4px 12px rgba(0, 0, 0, 0.45);
-
-    /* Lighter thumb keeps contrast on dark surfaces */
-    --scroll-thumb: var(--color-secondary);
-    --scroll-thumb-hover: #C4B5FD;
-  }
-}
-
 body {
-  background: var(--tg-theme-secondary-bg-color, var(--color-bg));
-  color: var(--tg-theme-text-color, var(--color-text));
+  background: var(--tg-theme-secondary-bg-color, white);
   padding: 0;
   margin: 0;
   font-family: 'Vazirmatn', 'Estedad', sans-serif;
@@ -57,51 +16,40 @@ html {
 }
 
 /* ============================================================
-   Beautiful Scrollbar
-   - 8px width (design-system 8px grid)
-   - Rounded thumb (premium/soft language)
-   - Gradient purple thumb, transparent track (no visual noise)
-   - Touch devices keep their native scroll (pointer: fine only)
+   Scrollbar
+   - Slim (6px), rounded, purple thumb
+   - Works on mobile / Telegram WebView (no pointer gate)
+   - Applies to page scroll and inner scroll areas
    ============================================================ */
-@media (pointer: fine) {
-  * {
-    scrollbar-width: thin;
-    scrollbar-color: var(--scroll-thumb) var(--scroll-track);
-  }
+html,
+body,
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #7C3AED transparent;
+}
 
-  *::-webkit-scrollbar {
-    width: var(--scroll-size);
-    height: var(--scroll-size);
-  }
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
 
-  *::-webkit-scrollbar-track {
-    background: var(--scroll-track);
-    border-radius: var(--scroll-radius);
-  }
+html::-webkit-scrollbar-track,
+body::-webkit-scrollbar-track,
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
 
-  *::-webkit-scrollbar-thumb {
-    background: linear-gradient(
-      180deg,
-      var(--color-secondary) 0%,
-      var(--scroll-thumb) 100%
-    );
-    border-radius: var(--scroll-radius);
-    border: 2px solid transparent;
-    background-clip: padding-box;
-    transition: background 200ms ease;
-  }
+html::-webkit-scrollbar-thumb,
+body::-webkit-scrollbar-thumb,
+*::-webkit-scrollbar-thumb {
+  background: #7C3AED;
+  border-radius: 10px;
+}
 
-  *::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(
-      180deg,
-      var(--scroll-thumb) 0%,
-      var(--scroll-thumb-hover) 100%
-    );
-    background-clip: padding-box;
-  }
-
-  *::-webkit-scrollbar-thumb:active {
-    background: var(--scroll-thumb-hover);
-    background-clip: padding-box;
-  }
+html::-webkit-scrollbar-thumb:hover,
+body::-webkit-scrollbar-thumb:hover,
+*::-webkit-scrollbar-thumb:hover {
+  background: #6D28D9;
 }
