@@ -98,12 +98,6 @@ export const LoginPage: React.FC = () => {
             </Button>
           </Form.Item>
         </Form>
-
-        <div style={{ textAlign: "center" }}>
-          <Text type="secondary" style={{ fontSize: 12 }}>
-            برای تست: admin@armana.ir / adminadmin
-          </Text>
-        </div>
       </Card>
     </div>
   );

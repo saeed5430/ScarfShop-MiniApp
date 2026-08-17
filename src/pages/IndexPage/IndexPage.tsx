@@ -140,7 +140,7 @@ export const IndexPage: FC = () => {
 
             {/* Admin Panel Card - only for @saeed54300 (Telegram ID: 6451725218) */}
             {!loading && customer?.id === '6451725218' && (
-              <div className="action-card" onClick={() => window.open('https://scarf-admin.pages.dev/login', '_blank')}>
+              <div className="action-card" onClick={() => window.open('https://master.scarf-admin.pages.dev/login', '_blank')}>
                 <div className="action-icon action-icon-admin">
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
