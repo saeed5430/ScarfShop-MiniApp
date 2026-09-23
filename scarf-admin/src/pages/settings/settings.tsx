@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Card, Form, Input, Button, message, Spin } from "antd";
 import { SaveOutlined } from "@ant-design/icons";
 
-const API_URL = "https://scarf-mini-app.abdollahi003.workers.dev";
+const API_URL = "https://scarfminiappbale-api.abdollahi003.workers.dev";
 
 export const SettingsPage: React.FC = () => {
   const [form] = Form.useForm();
@@ -23,7 +23,7 @@ export const SettingsPage: React.FC = () => {
 
   const fetchSettings = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/settings`, {
+      const response = await fetch(`${API_URL}/api/bale-admin/settings`, {
         headers: getHeaders(),
       });
       const data = await response.json();
@@ -49,7 +49,7 @@ export const SettingsPage: React.FC = () => {
         value: String(value || ""),
       }));
 
-      const response = await fetch(`${API_URL}/api/settings/bulk`, {
+      const response = await fetch(`${API_URL}/api/bale-admin/settings/bulk`, {
         method: "PUT",
         headers: getHeaders(),
         body: JSON.stringify({ items }),

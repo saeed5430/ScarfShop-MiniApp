@@ -19,7 +19,7 @@ export const AdminEdit: React.FC = () => {
         <Form.Item label="ایمیل" name="email" rules={[{ required: true, type: "email", message: "ایمیل معتبر وارد کنید" }]}>
           <Input placeholder="admin@example.com" />
         </Form.Item>
-        <Form.Item label="رمز عبور جدید" name="password_hash" extra="اگر نمیخواید رمز تغییر کند، خالی بگذارید">
+        <Form.Item label="رمز عبور جدید" name="password" extra="اگر نمیخواید رمز تغییر کند، خالی بگذارید" rules={[{ min: 6, message: "رمز عبور باید حداقل ۶ کاراکتر باشد" }]}>
           <Input.Password placeholder="رمز عبور جدید" />
         </Form.Item>
       </Form>

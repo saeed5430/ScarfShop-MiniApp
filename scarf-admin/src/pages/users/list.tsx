@@ -48,7 +48,7 @@ export const UserList: React.FC = () => {
   };
 
   return (
-    <List headerProps={{ title: "کاربران" }}>
+    <List headerProps={{ title: "کاربران بله" }}>
       <ResponsiveTable
         dataSource={tableProps.dataSource || []}
         loading={!!tableProps.loading}
@@ -114,7 +114,7 @@ export const UserList: React.FC = () => {
       >
         {selectedCustomer && (
           <Descriptions bordered column={1} size="small">
-            <Descriptions.Item label="شناسه تلگرام">
+            <Descriptions.Item label="شناسه بله">
               <Text copyable>{selectedCustomer.id}</Text>
             </Descriptions.Item>
             <Descriptions.Item label="نام">

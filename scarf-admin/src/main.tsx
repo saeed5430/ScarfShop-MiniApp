@@ -1,7 +1,7 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter, Outlet, Route, Routes } from "react-router-dom";
-import { Refine, useAuthenticated } from "@refinedev/core";
+import { Authenticated, Refine } from "@refinedev/core";
 import { dataProvider } from "./dataProvider";
 import { authProvider } from "./providers/authProvider";
 import routerProvider, {
@@ -18,6 +18,7 @@ import "@refinedev/antd/dist/reset.css";
 import { LoginPage } from "./pages/login";
 import { CategoryList, CategoryCreate, CategoryEdit } from "./pages/categories";
 import { ProductList, ProductCreate, ProductEdit } from "./pages/products";
+import { VariantList, VariantCreate, VariantEdit } from "./pages/variants";
 import { ColorList, ColorCreate, ColorEdit } from "./pages/colors";
 import { SizeList, SizeCreate, SizeEdit } from "./pages/sizes";
 import { DesignList, DesignCreate, DesignEdit } from "./pages/designs";
@@ -26,16 +27,19 @@ import { AdminList, AdminCreate, AdminEdit } from "./pages/admins";
 import { OrderList, OrderShow } from "./pages/orders";
 import { SettingsPage } from "./pages/settings";
 
-const Authenticated: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isLoading } = useAuthenticated();
-  if (isLoading) return null;
-  return <>{children}</>;
+const RequireAuth: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  return (
+    <Authenticated key="admin-auth" redirectOnFail="/login">
+      <Outlet />
+      {children}
+    </Authenticated>
+  );
 };
 
 function App() {
   return (
     <BrowserRouter>
-      <ConfigProvider theme={RefineThemes.Purple} locale={faIR} direction="rtl">
+      <ConfigProvider theme={RefineThemes.Green} locale={faIR} direction="rtl">
         <AntdApp>
           <Refine
             dataProvider={dataProvider}
@@ -45,12 +49,13 @@ function App() {
             resources={[
               { name: "categories", list: "/categories", create: "/categories/create", edit: "/categories/edit/:id", meta: { label: "دسته‌بندی‌ها" } },
               { name: "products", list: "/products", create: "/products/create", edit: "/products/edit/:id", meta: { label: "محصولات" } },
+              { name: "variants", list: "/variants", create: "/variants/create", edit: "/variants/edit/:id", meta: { label: "متغیرها" } },
               { name: "colors", list: "/colors", create: "/colors/create", edit: "/colors/edit/:id", meta: { label: "رنگ‌ها" } },
               { name: "sizes", list: "/sizes", create: "/sizes/create", edit: "/sizes/edit/:id", meta: { label: "سایزها" } },
               { name: "designs", list: "/designs", create: "/designs/create", edit: "/designs/edit/:id", meta: { label: "طرح‌ها" } },
-              { name: "users", list: "/users", meta: { label: "کاربران" } },
-              { name: "admins", list: "/admins", create: "/admins/create", edit: "/admins/edit/:id", meta: { label: "ادمین‌ها" } },
+              { name: "users", list: "/users", meta: { label: "کاربران بله" } },
               { name: "orders", list: "/orders", show: "/orders/show/:id", meta: { label: "سفارشات" } },
+              { name: "admins", list: "/admins", create: "/admins/create", edit: "/admins/edit/:id", meta: { label: "ادمین‌ها" } },
               { name: "settings", list: "/settings", meta: { label: "تنظیمات" } },
             ]}
             options={{
@@ -65,16 +70,17 @@ function App() {
               <Route path="/login" element={<LoginPage />} />
               <Route
                 element={
-                  <Authenticated>
+                  <RequireAuth>
                     <ThemedLayout>
                       <Outlet />
                     </ThemedLayout>
-                  </Authenticated>
+                  </RequireAuth>
                 }
               >
                 <Route index element={<NavigateToResource resource="categories" />} />
                 <Route path="/categories"><Route index element={<CategoryList />} /><Route path="create" element={<CategoryCreate />} /><Route path="edit/:id" element={<CategoryEdit />} /></Route>
                 <Route path="/products"><Route index element={<ProductList />} /><Route path="create" element={<ProductCreate />} /><Route path="edit/:id" element={<ProductEdit />} /></Route>
+                <Route path="/variants"><Route index element={<VariantList />} /><Route path="create" element={<VariantCreate />} /><Route path="edit/:id" element={<VariantEdit />} /></Route>
                 <Route path="/colors"><Route index element={<ColorList />} /><Route path="create" element={<ColorCreate />} /><Route path="edit/:id" element={<ColorEdit />} /></Route>
                 <Route path="/sizes"><Route index element={<SizeList />} /><Route path="create" element={<SizeCreate />} /><Route path="edit/:id" element={<SizeEdit />} /></Route>
                 <Route path="/designs"><Route index element={<DesignList />} /><Route path="create" element={<DesignCreate />} /><Route path="edit/:id" element={<DesignEdit />} /></Route>

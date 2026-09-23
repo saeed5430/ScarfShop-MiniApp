@@ -4,7 +4,7 @@ import { useState } from "react";
 import { PlusOutlined } from "@ant-design/icons";
 import { MultiImageUploader, type ImageData } from "../../components/ImageUploader/multi";
 
-const API_URL = "https://scarf-mini-app.abdollahi003.workers.dev";
+const API_URL = "https://scarfminiappbale-api.abdollahi003.workers.dev";
 
 const getAuthHeaders = (): Record<string, string> => {
   const token = localStorage.getItem("admin_token");
@@ -61,7 +61,7 @@ export const ProductCreate: React.FC = () => {
     }
     setCreatingColor(true);
     try {
-      const response = await fetch(`${API_URL}/api/colors`, {
+      const response = await fetch(`${API_URL}/api/bale-admin/colors`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify(newColor),
@@ -88,7 +88,7 @@ export const ProductCreate: React.FC = () => {
     }
     setCreatingSize(true);
     try {
-      const response = await fetch(`${API_URL}/api/sizes`, {
+      const response = await fetch(`${API_URL}/api/bale-admin/sizes`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify(newSize),
@@ -115,7 +115,7 @@ export const ProductCreate: React.FC = () => {
         onFinish={async (values) => {
           await formProps.onFinish?.({
             ...values,
-            images: imageList,
+            images: imageList.map((img) => img.url).filter(Boolean),
           });
         }}
         layout="vertical"
@@ -226,7 +226,7 @@ export const ProductCreate: React.FC = () => {
           <MultiImageUploader
             value={imageList}
             onChange={setImageList}
-            folder="products"
+            folder="/products-bale"
             maxCount={8}
           />
         </Card>

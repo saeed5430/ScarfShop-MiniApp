@@ -1,6 +1,6 @@
 import { DataProvider } from "@refinedev/core";
 
-const API_URL = "https://scarf-mini-app.abdollahi003.workers.dev";
+const API_URL = "https://scarfminiappbale-api.abdollahi003.workers.dev";
 
 const getToken = () => localStorage.getItem("admin_token");
 
@@ -16,7 +16,7 @@ class ApiError extends Error {
 const fetchJson = async (url: string, options?: RequestInit) => {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    ...(options?.headers as Record<string, string>),
+    ...((options?.headers as Record<string, string>) ?? {}),
   };
 
   const token = getToken();
@@ -34,20 +34,30 @@ const fetchJson = async (url: string, options?: RequestInit) => {
   return response.json();
 };
 
-// Map resource name to admin API path and response key
 const resourceMap: Record<string, { path: string; key: string }> = {
-  categories: { path: "/api/admin/categories", key: "categories" },
-  products: { path: "/api/admin/products", key: "items" },
-  colors: { path: "/api/admin/colors", key: "items" },
-  sizes: { path: "/api/admin/sizes", key: "items" },
-  designs: { path: "/api/admin/designs", key: "items" },
-  users: { path: "/api/admin/customers", key: "customers" },
-  customers: { path: "/api/admin/customers", key: "customers" },
-  admins: { path: "/api/admin/admins", key: "admins" },
-  orders: { path: "/api/admin/orders", key: "orders" },
-  coupons: { path: "/api/admin/coupons", key: "coupons" },
-  settings: { path: "/api/admin/settings", key: "settings" },
-  chats: { path: "/api/admin/chats", key: "messages" },
+  categories: { path: "/api/bale-admin/categories", key: "categories" },
+  products: { path: "/api/bale-admin/products", key: "items" },
+  variants: { path: "/api/bale-admin/variants", key: "items" },
+  colors: { path: "/api/bale-admin/colors", key: "items" },
+  sizes: { path: "/api/bale-admin/sizes", key: "items" },
+  designs: { path: "/api/bale-admin/designs", key: "items" },
+  users: { path: "/api/bale-admin/users", key: "users" },
+  orders: { path: "/api/bale-admin/orders", key: "orders" },
+  admins: { path: "/api/bale-admin/admins", key: "admins" },
+  settings: { path: "/api/bale-admin/settings", key: "settings" },
+};
+
+const singleKey: Record<string, string[]> = {
+  categories: ["category"],
+  products: ["product"],
+  variants: ["variant"],
+  colors: ["item"],
+  sizes: ["item"],
+  designs: ["item"],
+  users: ["user"],
+  orders: ["order"],
+  admins: ["admin"],
+  settings: ["setting"],
 };
 
 export const dataProvider: DataProvider = {
@@ -57,14 +67,12 @@ export const dataProvider: DataProvider = {
 
     const params = new URLSearchParams();
 
-    // Pagination
     if (pagination) {
       const { current = 1, pageSize = 10 } = pagination;
       params.set("limit", String(pageSize));
       params.set("offset", String((current - 1) * pageSize));
     }
 
-    // Filters
     if (filters) {
       for (const filter of filters) {
         if ("field" in filter && filter.operator === "eq") {
@@ -76,31 +84,23 @@ export const dataProvider: DataProvider = {
     const qs = params.toString();
     const data = await fetchJson(`${API_URL}${config.path}${qs ? `?${qs}` : ""}`);
 
-    // Extract array and total from response
-    let items: any[];
-    let total: number;
-
+    let items: unknown[];
     if (config.key === "categories") {
       items = data.categories || [];
-      total = items.length;
     } else if (config.key === "items") {
       items = data.items || [];
-      total = data.total ?? items.length;
-    } else if (config.key === "customers") {
-      items = data.customers || [];
-      total = data.total ?? items.length;
+    } else if (config.key === "users") {
+      items = data.users || [];
     } else if (config.key === "orders") {
       items = data.orders || [];
-      total = data.total ?? items.length;
-    } else if (config.key === "coupons") {
-      items = data.coupons || [];
-      total = data.total ?? items.length;
+    } else if (config.key === "admins") {
+      items = data.admins || [];
     } else {
       items = data[config.key] || data.items || [];
-      total = data.total ?? items.length;
     }
+    const total: number = data.total ?? items.length;
 
-    return { data: items, total };
+    return { data: items, total } as never;
   },
 
   getOne: async ({ resource, id }) => {
@@ -109,44 +109,52 @@ export const dataProvider: DataProvider = {
 
     const url = `${API_URL}${config.path}/${id}`;
     const data = await fetchJson(url);
-    return { data: data[resource] || data.item || data.product || data.admin || data.order || data.coupon || data.setting || data };
+    const keys = singleKey[resource] ?? [];
+    for (const key of keys) {
+      if (data[key] !== undefined) return { data: data[key] } as never;
+    }
+    return { data } as never;
   },
 
   create: async ({ resource, variables }) => {
     const config = resourceMap[resource];
     if (!config) throw new Error(`Unknown resource: ${resource}`);
 
-    // For create/update/delete, use the main API routes with requireAdmin
-    const mainPath = config.path.replace("/api/admin", "/api");
-    const data = await fetchJson(`${API_URL}${mainPath}`, {
+    const data = await fetchJson(`${API_URL}${config.path}`, {
       method: "POST",
       body: JSON.stringify(variables),
     });
 
-    return { data: data[resource] || data.item || data.product || data.admin || data.order || data.coupon || data.setting || data };
+    const keys = singleKey[resource] ?? [];
+    for (const key of keys) {
+      if (data[key] !== undefined) return { data: data[key] } as never;
+    }
+    return { data } as never;
   },
 
   update: async ({ resource, id, variables }) => {
     const config = resourceMap[resource];
     if (!config) throw new Error(`Unknown resource: ${resource}`);
 
-    const mainPath = config.path.replace("/api/admin", "/api");
-    const data = await fetchJson(`${API_URL}${mainPath}/${id}`, {
+    const data = await fetchJson(`${API_URL}${config.path}/${id}`, {
       method: "PUT",
       body: JSON.stringify(variables),
     });
 
-    return { data: data[resource] || data.item || data.product || data.admin || data.order || data.coupon || data.setting || data };
+    const keys = singleKey[resource] ?? [];
+    for (const key of keys) {
+      if (data[key] !== undefined) return { data: data[key] } as never;
+    }
+    return { data } as never;
   },
 
   deleteOne: async ({ resource, id }) => {
     const config = resourceMap[resource];
     if (!config) throw new Error(`Unknown resource: ${resource}`);
 
-    const mainPath = config.path.replace("/api/admin", "/api");
-    await fetchJson(`${API_URL}${mainPath}/${id}`, { method: "DELETE" });
+    await fetchJson(`${API_URL}${config.path}/${id}`, { method: "DELETE" });
 
-    return { data: { id } as any };
+    return { data: { id } } as never;
   },
 
   getApiUrl: () => API_URL,

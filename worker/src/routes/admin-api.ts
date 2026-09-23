@@ -1,9 +1,13 @@
 import { Hono } from 'hono';
 import { Database } from '../db';
 import { requireAdmin } from '../middleware/admin-auth';
+import { updateAdminMessages } from './telegram';
 
 type Bindings = {
   DB: D1Database;
+  ORDER_NOTIFY_BOT_TOKEN: string;
+  TELEGRAM_BOT_TOKEN: string;
+  BASE_URL: string;
 };
 
 export const adminApiRoutes = new Hono<{ Bindings: Bindings }>();
@@ -83,7 +87,10 @@ adminApiRoutes.get('/orders', async (c) => {
   if (!db) return c.json({ error: 'Database not configured' }, 500);
 
   const database = new Database(db);
-  const orders = await database.orders.list();
+  const platform = c.req.query('platform');
+  const orders = platform === 'bale' || platform === 'telegram'
+    ? await database.orders.listByPlatform(platform)
+    : await database.orders.list();
 
   return c.json({ orders, total: orders.length });
 });
@@ -96,8 +103,69 @@ adminApiRoutes.get('/orders/:id', async (c) => {
   const order = await database.orders.getById(Number(c.req.param('id')));
   if (!order) return c.json({ error: 'Not found' }, 404);
 
-  const items = await database.orderItems.listByOrder(order.id);
+  const rawItems = await database.orderItems.listByOrder(order.id);
+  const items = await Promise.all(rawItems.map(async (item) => {
+    const product = await db.prepare('SELECT name, material, category_id FROM products WHERE id = ?').bind(item.product_id).first();
+    const category = product?.category_id
+      ? await db.prepare('SELECT name FROM categories WHERE id = ?').bind(product.category_id).first()
+      : null;
+    const color = item.color_id
+      ? await db.prepare('SELECT name, hex FROM colors WHERE id = ?').bind(item.color_id).first()
+      : null;
+    const size = item.size_id
+      ? await db.prepare('SELECT dimensions FROM sizes WHERE id = ?').bind(item.size_id).first()
+      : null;
+    return {
+      ...item,
+      product_name: product?.name ?? null,
+      product_material: product?.material ?? null,
+      category_name: category?.name ?? null,
+      color_name: color?.name ?? null,
+      color_hex: color?.hex ?? null,
+      size_dimensions: size?.dimensions ?? null,
+    };
+  }));
   return c.json({ order, items });
+});
+
+adminApiRoutes.put('/orders/:id', async (c) => {
+  const db = c.env.DB;
+  if (!db) return c.json({ error: 'Database not configured' }, 500);
+  const id = Number(c.req.param('id'));
+  const body = await c.req.json<{ payment_status?: 'pending' | 'paid'; notes?: string }>();
+  if (body.payment_status && !['pending', 'paid'].includes(body.payment_status)) {
+    return c.json({ error: 'Invalid payment status' }, 400);
+  }
+  const database = new Database(db);
+  const previousOrder = await database.orders.getById(id);
+  const order = await database.orders.update(id, body);
+  if (!order) return c.json({ error: 'Not found' }, 404);
+  if (c.env.ORDER_NOTIFY_BOT_TOKEN) {
+    await updateAdminMessages(db, c.env.ORDER_NOTIFY_BOT_TOKEN, order);
+  }
+  return c.json({ order });
+});
+
+adminApiRoutes.get('/orders/:id/receipt', async (c) => {
+  const db = c.env.DB;
+  const botToken = c.env.ORDER_NOTIFY_BOT_TOKEN;
+  if (!db || !botToken) return c.json({ error: 'Receipt service not configured' }, 500);
+  const order = await new Database(db).orders.getById(Number(c.req.param('id')));
+  if (!order) return c.json({ error: 'Not found' }, 404);
+  const type = c.req.query('type') === 'voice' ? 'voice' : 'invoice';
+  const fileId = type === 'voice' ? order.voice_file_id : order.invoice_file_id;
+  if (!fileId) return c.json({ error: 'File not uploaded' }, 404);
+  const fileResponse = await fetch(`https://api.telegram.org/bot${botToken}/getFile?file_id=${encodeURIComponent(fileId)}`);
+  const fileData = await fileResponse.json<{ ok?: boolean; result?: { file_path?: string } }>();
+  if (!fileData.ok || !fileData.result?.file_path) return c.json({ error: 'File unavailable' }, 404);
+  const mediaResponse = await fetch(`https://api.telegram.org/file/bot${botToken}/${fileData.result.file_path}`);
+  if (!mediaResponse.ok || !mediaResponse.body) return c.json({ error: 'File unavailable' }, 404);
+  return new Response(mediaResponse.body, {
+    headers: {
+      'Content-Type': mediaResponse.headers.get('Content-Type') || (type === 'voice' ? 'audio/ogg' : 'image/jpeg'),
+      'Cache-Control': 'private, max-age=300',
+    },
+  });
 });
 
 adminApiRoutes.delete('/orders/:id', async (c) => {
@@ -124,7 +192,7 @@ adminApiRoutes.delete('/orders/:id', async (c) => {
   }
 });
 
-// Admin Customers
+// Admin Customers (Telegram)
 adminApiRoutes.get('/customers', async (c) => {
   const db = c.env.DB;
   if (!db) return c.json({ error: 'Database not configured' }, 500);
@@ -135,13 +203,35 @@ adminApiRoutes.get('/customers', async (c) => {
   return c.json({ customers, total: customers.length });
 });
 
-// Admin Chats
+// Admin Chats (Telegram)
 adminApiRoutes.get('/chats/:customerId', async (c) => {
   const db = c.env.DB;
   if (!db) return c.json({ error: 'Database not configured' }, 500);
 
   const database = new Database(db);
   const messages = await database.chats.findByCustomerId(c.req.param('customerId'));
+
+  return c.json({ messages });
+});
+
+// Admin Bale Customers
+adminApiRoutes.get('/bale/customers', async (c) => {
+  const db = c.env.DB;
+  if (!db) return c.json({ error: 'Database not configured' }, 500);
+
+  const database = new Database(db);
+  const customers = await database.baleCustomers.list();
+
+  return c.json({ customers, total: customers.length });
+});
+
+// Admin Bale Chats
+adminApiRoutes.get('/bale/chats/:customerId', async (c) => {
+  const db = c.env.DB;
+  if (!db) return c.json({ error: 'Database not configured' }, 500);
+
+  const database = new Database(db);
+  const messages = await database.baleChats.findByCustomerId(c.req.param('customerId'));
 
   return c.json({ messages });
 });

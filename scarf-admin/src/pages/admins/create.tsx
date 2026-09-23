@@ -19,7 +19,7 @@ export const AdminCreate: React.FC = () => {
         <Form.Item label="ایمیل" name="email" rules={[{ required: true, type: "email", message: "ایمیل معتبر وارد کنید" }]}>
           <Input placeholder="admin@example.com" />
         </Form.Item>
-        <Form.Item label="رمز عبور" name="password_hash" rules={[{ required: true, message: "رمز عبور را وارد کنید" }]}>
+        <Form.Item label="رمز عبور" name="password" rules={[{ required: true, message: "رمز عبور را وارد کنید" }, { min: 6, message: "رمز عبور باید حداقل ۶ کاراکتر باشد" }]}>
           <Input.Password placeholder="رمز عبور" />
         </Form.Item>
       </Form>

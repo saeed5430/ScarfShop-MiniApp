@@ -1,8 +1,10 @@
 import { TonConnectUIProvider } from '@tonconnect/ui-react';
 
 import { App } from '@/components/App.tsx';
+import { BaleApp } from '@/bale/BaleApp.tsx';
 import { ErrorBoundary } from '@/components/ErrorBoundary.tsx';
 import { AuthProvider } from '@/context/AuthContext.tsx';
+import { BaleAuthProvider } from '@/bale/BaleAuthContext.tsx';
 import { publicUrl } from '@/helpers/publicUrl.ts';
 
 function ErrorBoundaryError({ error }: { error: unknown }) {
@@ -22,7 +24,17 @@ function ErrorBoundaryError({ error }: { error: unknown }) {
   );
 }
 
-export function Root() {
+export function Root({ platform }: { platform: 'bale' | 'telegram' }) {
+  if (platform === 'bale') {
+    return (
+      <ErrorBoundary fallback={ErrorBoundaryError}>
+        <BaleAuthProvider>
+          <BaleApp />
+        </BaleAuthProvider>
+      </ErrorBoundary>
+    );
+  }
+
   return (
     <ErrorBoundary fallback={ErrorBoundaryError}>
       <TonConnectUIProvider

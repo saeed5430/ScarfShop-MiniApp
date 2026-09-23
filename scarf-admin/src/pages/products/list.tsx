@@ -11,7 +11,7 @@ import { DeleteOutlined, UndoOutlined } from "@ant-design/icons";
 const { Text } = Typography;
 
 export const ProductList: React.FC = () => {
-  const { tableProps } = useTable();
+  const { tableProps } = useTable({ pagination: { pageSize: 50 } });
   const { mutate: remove } = useDelete();
   const { mutate: update } = useUpdate();
   const navigate = useNavigate();
@@ -61,6 +61,20 @@ export const ProductList: React.FC = () => {
     );
   };
 
+  const parseImages = (images: unknown): string[] => {
+    const arr = typeof images === "string" ? (() => { try { return JSON.parse(images); } catch { return []; } })() : images;
+    if (!Array.isArray(arr)) return [];
+    const out: string[] = [];
+    for (const item of arr) {
+      if (typeof item === "string") {
+        if (item && item !== "[object Object]") out.push(item);
+      } else if (item && typeof item === "object" && typeof (item as { url?: unknown }).url === "string") {
+        out.push((item as { url: string }).url);
+      }
+    }
+    return out;
+  };
+
   const columns = [
     {
       key: "index",
@@ -74,8 +88,9 @@ export const ProductList: React.FC = () => {
       title: "تصویر",
       dataIndex: "images",
       width: 60,
-      render: (images: string[]) => {
-        if (!images || images.length === 0) {
+      render: (images: unknown) => {
+        const list = parseImages(images);
+        if (list.length === 0) {
           return (
             <div style={{ width: 40, height: 40, borderRadius: 8, background: "#F3F4F6", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>
               📷
@@ -83,7 +98,7 @@ export const ProductList: React.FC = () => {
           );
         }
         return (
-          <Image src={images[0]} width={40} height={40} style={{ borderRadius: 8, objectFit: "cover" }} preview={false} />
+          <Image src={list[0]} width={40} height={40} style={{ borderRadius: 8, objectFit: "cover" }} preview={false} />
         );
       },
     },
@@ -100,11 +115,18 @@ export const ProductList: React.FC = () => {
       render: (name: string) => <Tag>{name || "-"}</Tag>,
     },
     {
+      key: "price",
+      title: "قیمت",
+      dataIndex: "price",
+      width: 110,
+      render: (price: number) => <span>{Number(price || 0).toLocaleString("fa-IR")}</span>,
+    },
+    {
       key: "is_stock",
       title: "موجودی",
       dataIndex: "is_stock",
       width: 100,
-      render: (is_stock: boolean) => (
+      render: (is_stock: number) => (
         <Tag color={is_stock ? "green" : "red"}>
           {is_stock ? "موجود" : "ناموجود"}
         </Tag>
@@ -116,7 +138,7 @@ export const ProductList: React.FC = () => {
       dataIndex: "color_count",
       width: 80,
       render: (count: number) => (
-        <Tag color={count > 0 ? "blue" : "default"}>{count}</Tag>
+        <Tag color={Number(count) > 0 ? "blue" : "default"}>{count ?? 0}</Tag>
       ),
     },
     {
@@ -125,7 +147,7 @@ export const ProductList: React.FC = () => {
       dataIndex: "size_count",
       width: 80,
       render: (count: number) => (
-        <Tag color={count > 0 ? "purple" : "default"}>{count}</Tag>
+        <Tag color={Number(count) > 0 ? "purple" : "default"}>{count ?? 0}</Tag>
       ),
     },
     {
@@ -133,9 +155,9 @@ export const ProductList: React.FC = () => {
       title: "وضعیت",
       dataIndex: "is_active",
       width: 100,
-      render: (is_active: boolean, record: any) => (
+      render: (is_active: number, record: any) => (
         <Switch
-          checked={is_active}
+          checked={Boolean(is_active)}
           checkedChildren="فعال"
           unCheckedChildren="غیرفعال"
           onChange={(checked) => handleToggleActive(record, checked)}

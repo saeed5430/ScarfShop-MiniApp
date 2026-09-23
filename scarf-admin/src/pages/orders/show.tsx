@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Show, TextField } from "@refinedev/antd";
-import { Button, Descriptions, Divider, Table, Tag, Typography, Space } from "antd";
+import { Button, Descriptions, Divider, Table, Tag, Typography, Space, message } from "antd";
 import { PersianDate } from "../../components/PersianDate";
 
 const { Title } = Typography;
 
 const paymentColors: Record<string, string> = { pending: "orange", paid: "green" };
 const paymentLabels: Record<string, string> = { pending: "پرداخت نشده", paid: "پرداخت شده" };
+const API_URL = "https://scarfminiappbale-api.abdollahi003.workers.dev";
 
 interface OrderItemDetail {
   id: number;
@@ -28,10 +29,19 @@ interface OrderDetail {
   id: number;
   user_id: string;
   payment_status: string;
+  delivery_method: string | null;
   notes: string | null;
   created_at: string;
   updated_at: string;
+  invoice_uploaded_at: number | null;
+  voice_uploaded_at: number | null;
 }
+
+const deliveryLabels: Record<string, string> = {
+  in_person: "🏪 تحویل حضوری",
+  tipax: "🚚 ارسال با تیپاکس",
+  carrier: "🚛 ارسال با باربری",
+};
 
 export const OrderShow: React.FC = () => {
   const { id } = useParams();
@@ -40,18 +50,46 @@ export const OrderShow: React.FC = () => {
   const [items, setItems] = useState<OrderItemDetail[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (!id) return;
-    setLoading(true);
-    fetch(`https://scarf-mini-app.abdollahi003.workers.dev/api/orders/${id}`)
-      .then((res) => res.json())
+  const getHeaders = () => {
+    const token = localStorage.getItem("admin_token");
+    const headers: Record<string, string> = {};
+    if (token) headers.Authorization = `Bearer ${token}`;
+    return headers;
+  };
+
+  const fetchOrder = () => {
+    if (!id) return Promise.resolve();
+    return fetch(`${API_URL}/api/bale-admin/orders/${id}`, { headers: getHeaders() })
+      .then((res) => {
+        if (!res.ok) throw new Error("Request failed");
+        return res.json();
+      })
       .then((data) => {
         setOrder(data.order);
         setItems(data.items || []);
-      })
+      });
+  };
+
+  useEffect(() => {
+    if (!id) return;
+    setLoading(true);
+    fetchOrder()
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [id]);
+
+  const openReceipt = async (type: "invoice" | "voice") => {
+    if (!order) return;
+    try {
+      const response = await fetch(`${API_URL}/api/bale-admin/orders/${order.id}/receipt?type=${type}`, { headers: getHeaders() });
+      if (!response.ok) throw new Error("Request failed");
+      const url = URL.createObjectURL(await response.blob());
+      window.open(url, "_blank", "noopener,noreferrer");
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch {
+      message.error("فایل قابل دریافت نیست");
+    }
+  };
 
   if (!order && !loading) {
     return (
@@ -110,7 +148,7 @@ export const OrderShow: React.FC = () => {
       dataIndex: "size_dimensions",
       key: "size_dimensions",
       width: 100,
-      render: (v: string | null) => v || "-",
+      render: (v: string | null) => v ? `سایز ${v}` : "-",
     },
     {
       title: "تعداد",
@@ -152,11 +190,28 @@ export const OrderShow: React.FC = () => {
         <Descriptions.Item label={<Title level={5} style={{ margin: 0 }}>تعداد اقلام</Title>}>
           <span style={{ fontWeight: 600, color: "#7C3AED" }}>{items.length} ردیف</span>
         </Descriptions.Item>
+        <Descriptions.Item label={<Title level={5} style={{ margin: 0 }}>نحوه تحویل</Title>}>
+          {order?.delivery_method ? (
+            <Tag color="purple">{deliveryLabels[order.delivery_method] ?? order.delivery_method}</Tag>
+          ) : (
+            <Tag>ثبت نشده</Tag>
+          )}
+        </Descriptions.Item>
         <Descriptions.Item label={<Title level={5} style={{ margin: 0 }}>یادداشت</Title>} span={2}>
           <TextField value={order?.notes || "—"} />
         </Descriptions.Item>
         <Descriptions.Item label={<Title level={5} style={{ margin: 0 }}>تاریخ ایجاد</Title>} span={2}>
           <PersianDate value={order?.created_at} />
+        </Descriptions.Item>
+        <Descriptions.Item label={<Title level={5} style={{ margin: 0 }}>تصویر فاکتور</Title>}>
+          {order?.invoice_uploaded_at
+            ? <Button size="small" onClick={() => void openReceipt("invoice")}>مشاهده فاکتور</Button>
+            : <Tag>ثبت نشده</Tag>}
+        </Descriptions.Item>
+        <Descriptions.Item label={<Title level={5} style={{ margin: 0 }}>توضیح صوتی</Title>}>
+          {order?.voice_uploaded_at
+            ? <Button size="small" onClick={() => void openReceipt("voice")}>پخش صوت</Button>
+            : <Tag>ثبت نشده</Tag>}
         </Descriptions.Item>
       </Descriptions>
 

@@ -207,14 +207,55 @@ export async function setVariantSizes(variantId: number, sizeIds: number[]): Pro
 
 // Orders
 
+export type DeliveryMethod = 'in_person' | 'tipax' | 'carrier';
+
+export const DELIVERY_LABELS: Record<DeliveryMethod, string> = {
+  in_person: 'تحویل حضوری',
+  tipax: 'ارسال با تیپاکس',
+  carrier: 'ارسال با باربری',
+};
+
 export interface Order {
   id: number;
   user_id: string;
-  payment_status: 'pending' | 'paid';
+  delivery_method: DeliveryMethod | null;
   notes: string | null;
   created_at: string;
   updated_at: string;
   item_count?: number;
+  customer_order_number?: number;
+  receipt_file_type?: 'photo' | 'voice' | null;
+  receipt_uploaded_at?: number | null;
+  invoice_uploaded_at?: number | null;
+  voice_uploaded_at?: number | null;
+  items?: OrderItemDetail[];
+}
+
+export interface OrderItemDetail {
+  product_id: number;
+  product_name: string | null;
+  color_name: string | null;
+  color_hex: string | null;
+  size_dimensions: string | null;
+  quantity: number;
+}
+
+export async function getMyOrders(): Promise<{ orders: Order[] }> {
+  return apiRequest('/api/my-orders');
+}
+
+export function getOrderReceiptUrl(orderId: number, type: 'invoice' | 'voice' = 'invoice'): string {
+  const baseUrl = import.meta.env.VITE_API_URL || '';
+  return `${baseUrl}/api/my-orders/${orderId}/receipt?type=${type}`;
+}
+
+export async function getOrderReceipt(orderId: number, type: 'invoice' | 'voice'): Promise<string> {
+  const token = localStorage.getItem('session_token');
+  const response = await fetch(getOrderReceiptUrl(orderId, type), {
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  });
+  if (!response.ok) throw new Error('Receipt unavailable');
+  return URL.createObjectURL(await response.blob());
 }
 
 export interface OrderItem {
@@ -234,7 +275,7 @@ export async function getOrder(id: number): Promise<{ order: Order; items: Order
   return apiRequest(`/api/orders/${id}`);
 }
 
-export async function createOrder(data: { user_id: string; notes?: string; items: { product_id: number; color_id?: number; size_id?: number; quantity: number }[] }): Promise<{ order: Order }> {
+export async function createOrder(data: { user_id: string; delivery_method?: DeliveryMethod | null; notes?: string; items: { product_id: number; color_id?: number; size_id?: number; quantity: number }[] }): Promise<{ order: Order }> {
   return apiRequest('/api/orders', {
     method: 'POST',
     body: JSON.stringify(data),
@@ -274,4 +315,21 @@ export async function createCoupon(data: Partial<Coupon>): Promise<{ coupon: Cou
     method: 'POST',
     body: JSON.stringify(data),
   });
+}
+
+// Settings
+export interface Setting {
+  id: number;
+  key: string;
+  value: string | null;
+  type: string;
+  label: string | null;
+}
+
+export async function getSettings(): Promise<{ settings: Setting[] }> {
+  return apiRequest('/api/settings');
+}
+
+export async function getSetting(key: string): Promise<{ setting: Setting | null }> {
+  return apiRequest(`/api/settings/${key}`);
 }

@@ -2,12 +2,18 @@ import React, { useState, useRef, useCallback } from "react";
 import { Button, message, Spin, Image } from "antd";
 import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 
-const API_URL = "https://scarf-mini-app.abdollahi003.workers.dev";
+// ImageKit upload is now handled via Bale admin API.
+// We keep this for backward compatibility but redirect to Bale admin endpoints.
+
+const BASE_URL = "https://scarfminiappbale-api.abdollahi003.workers.dev";
 
 const getAuthHeaders = (): Record<string, string> => {
   const token = localStorage.getItem("admin_token");
   return token ? { Authorization: `Bearer ${token}` } : {};
 };
+
+const UPLOAD_ENDPOINT = `${BASE_URL}/api/bale-admin/upload/image`;
+const DELETE_ENDPOINT = `${BASE_URL}/api/bale-admin/upload/image/`;
 
 export interface ImageData {
   url: string;
@@ -26,7 +32,7 @@ interface MultiImageUploaderProps {
 export const MultiImageUploader: React.FC<MultiImageUploaderProps> = ({
   value = [],
   onChange,
-  folder = "uploads",
+  folder = "/products-bale",
   disabled = false,
   maxSize = 5 * 1024 * 1024, // 5MB
   maxCount = 8,
@@ -63,7 +69,7 @@ export const MultiImageUploader: React.FC<MultiImageUploaderProps> = ({
       formData.append("folder", folder);
       formData.append("fileName", file.name);
 
-      const response = await fetch(`${API_URL}/api/upload/image`, {
+      const response = await fetch(UPLOAD_ENDPOINT, {
         method: "POST",
         headers: getAuthHeaders(),
         body: formData,
@@ -104,7 +110,7 @@ export const MultiImageUploader: React.FC<MultiImageUploaderProps> = ({
 
     try {
       // Delete from ImageKit
-      const response = await fetch(`${API_URL}/api/upload/image/${image.fileId}`, {
+      const response = await fetch(`${DELETE_ENDPOINT}${image.fileId}`, {
         method: "DELETE",
         headers: getAuthHeaders(),
       });

@@ -27,7 +27,7 @@ export const LoginPage: React.FC = () => {
         justifyContent: "center",
         alignItems: "center",
         minHeight: "100vh",
-        background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+        background: "linear-gradient(135deg, #FFFFFF 0%, #D1FAE5 55%, #10B981 100%)",
         direction: "rtl",
       }}
     >
@@ -44,7 +44,7 @@ export const LoginPage: React.FC = () => {
               width: 64,
               height: 64,
               borderRadius: "50%",
-              background: "linear-gradient(135deg, #EF4444 0%, #F87171 100%)",
+              background: "linear-gradient(135deg, #10B981 0%, #34D399 100%)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -98,12 +98,6 @@ export const LoginPage: React.FC = () => {
             </Button>
           </Form.Item>
         </Form>
-
-        <div style={{ textAlign: "center" }}>
-          <Text type="secondary" style={{ fontSize: 12 }}>
-            برای تست: admin@armana.ir / adminadmin
-          </Text>
-        </div>
       </Card>
     </div>
   );

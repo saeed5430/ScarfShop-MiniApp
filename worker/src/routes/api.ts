@@ -70,8 +70,12 @@ apiRoutes.get('/auth/is-admin', async (c) => {
   const customer = await database.customers.findById(result.customer_id!);
   if (!customer) return c.json({ is_admin: false }, 200);
 
-  const admin = await database.admins.findByUsername(customer.username || '');
-  return c.json({ is_admin: admin !== null });
+  // Check by username (Telegram username)
+  const adminByUsername = await database.admins.findByUsername(customer.username || '');
+  // Also check by customer_id (Telegram user ID)
+  const adminByCustomerId = customer.id ? await database.admins.findByCustomerId(customer.id) : null;
+
+  return c.json({ is_admin: adminByUsername !== null || adminByCustomerId !== null });
 });
 
 // Update customer profile
@@ -249,6 +253,33 @@ apiRoutes.get('/products', async (c) => {
   );
 
   return c.json({ items: enriched, total: enriched.length });
+});
+
+// Reorder active products (manual drag & drop from Admin)
+apiRoutes.put('/products/reorder', requireAdmin, async (c) => {
+  const db = c.env.DB;
+  if (!db) return c.json({ error: 'Database not configured' }, 500);
+
+  const body = await c.req.json<{ items?: { id: number; sort_order: number }[] }>().catch(() => ({ items: undefined }));
+  const items = body.items;
+
+  if (!Array.isArray(items) || items.length === 0) {
+    return c.json({ error: 'items is required' }, 400);
+  }
+
+  // Only accept numeric ids and sort_order values.
+  const cleanItems = items
+    .filter((it) => Number.isFinite(Number(it?.id)) && Number.isFinite(Number(it?.sort_order)))
+    .map((it) => ({ id: Number(it.id), sort_order: Number(it.sort_order) }));
+
+  if (cleanItems.length === 0) {
+    return c.json({ error: 'No valid items' }, 400);
+  }
+
+  const database = new Database(db);
+  await database.products.reorder(cleanItems);
+
+  return c.json({ success: true, updated: cleanItems.length });
 });
 
 apiRoutes.get('/products/:id', async (c) => {
@@ -733,6 +764,83 @@ apiRoutes.get('/orders', async (c) => {
   return c.json({ orders: enriched, total });
 });
 
+apiRoutes.get('/my-orders', requireCustomer, async (c) => {
+  const db = c.env.DB;
+  if (!db) return c.json({ error: 'Database not configured' }, 500);
+  const token = c.req.header('Authorization')?.replace('Bearer ', '') || '';
+  const session = await validateSession(db, token);
+  if (!session.valid || !session.customer_id) return c.json({ error: 'Token required' }, 401);
+
+  const database = new Database(db);
+  const orders = await database.orders.listByCustomer(session.customer_id);
+  const totalOrders = orders.length;
+
+  const enriched = await Promise.all(orders.map(async (order, index) => {
+    const rawItems = await database.orderItems.listByOrder(order.id);
+    const items = await Promise.all(rawItems.map(async (item) => {
+      const product = item.product_id ? await db.prepare('SELECT id, name FROM products WHERE id = ?').bind(item.product_id).first() : null;
+      const color = item.color_id ? await db.prepare('SELECT id, name, hex FROM colors WHERE id = ?').bind(item.color_id).first() : null;
+      const size = item.size_id ? await db.prepare('SELECT id, dimensions FROM sizes WHERE id = ?').bind(item.size_id).first() : null;
+
+      return {
+        product_id: item.product_id,
+        product_name: product?.name ?? null,
+        color_name: color?.name ?? null,
+        color_hex: color?.hex ?? null,
+        size_dimensions: size?.dimensions ?? null,
+        quantity: item.quantity,
+      };
+    }));
+
+    return {
+      id: order.id,
+      customer_order_number: totalOrders - index,
+      customer_id: order.customer_id,
+      delivery_method: order.delivery_method,
+      notes: order.notes,
+      receipt_file_type: order.receipt_file_type,
+      receipt_uploaded_at: order.receipt_uploaded_at,
+      invoice_uploaded_at: order.invoice_uploaded_at,
+      voice_uploaded_at: order.voice_uploaded_at,
+      created_at: order.created_at,
+      updated_at: order.updated_at,
+      items,
+    };
+  }));
+
+  return c.json({ orders: enriched });
+});
+
+apiRoutes.get('/my-orders/:id/receipt', requireCustomer, async (c) => {
+  const db = c.env.DB;
+  const botToken = c.env.ORDER_NOTIFY_BOT_TOKEN;
+  if (!db) return c.json({ error: 'Database not configured' }, 500);
+  if (!botToken) return c.json({ error: 'Receipt service not configured' }, 500);
+
+  const token = c.req.header('Authorization')?.replace('Bearer ', '') || '';
+  const session = await validateSession(db, token);
+  if (!session.valid || !session.customer_id) return c.json({ error: 'Token required' }, 401);
+  const order = await new Database(db).orders.getById(Number(c.req.param('id')));
+  if (!order || order.customer_id !== session.customer_id) return c.json({ error: 'Not found' }, 404);
+
+  const requestedType = c.req.query('type');
+  const fileType = requestedType === 'voice' ? 'voice' : requestedType === 'invoice' ? 'photo' : order.receipt_file_type;
+  const fileId = fileType === 'voice' ? order.voice_file_id : order.invoice_file_id;
+  if (!fileId) return c.json({ error: 'Receipt not uploaded' }, 404);
+  const fileResponse = await fetch(`https://api.telegram.org/bot${botToken}/getFile?file_id=${encodeURIComponent(fileId)}`);
+  const fileData = await fileResponse.json<{ ok?: boolean; result?: { file_path?: string } }>();
+  if (!fileData.ok || !fileData.result?.file_path) return c.json({ error: 'Receipt unavailable' }, 404);
+
+  const mediaResponse = await fetch(`https://api.telegram.org/file/bot${botToken}/${fileData.result.file_path}`);
+  if (!mediaResponse.ok || !mediaResponse.body) return c.json({ error: 'Receipt unavailable' }, 404);
+  return new Response(mediaResponse.body, {
+    headers: {
+      'Content-Type': mediaResponse.headers.get('Content-Type') || (fileType === 'voice' ? 'audio/ogg' : 'image/jpeg'),
+      'Cache-Control': 'private, max-age=300',
+    },
+  });
+});
+
 apiRoutes.get('/orders/:id', async (c) => {
   const db = c.env.DB;
   if (!db) return c.json({ error: 'Database not configured' }, 500);
@@ -776,10 +884,18 @@ apiRoutes.post('/orders', requireCustomer, async (c) => {
   const body = await c.req.json();
   const database = new Database(db);
 
+  // Validate delivery method if provided
+  const deliveryMethod = body.delivery_method ?? null;
+  if (deliveryMethod !== null && !['in_person', 'tipax', 'carrier'].includes(deliveryMethod)) {
+    return c.json({ error: 'روش تحویل نامعتبر است' }, 400);
+  }
+
   // Ensure user can only create orders for themselves
   const orderData = {
     ...body,
-    user_id: customerId,
+    customer_id: customerId,
+    platform: 'telegram' as const,
+    delivery_method: deliveryMethod,
   };
 
   const order = await database.orders.create(orderData);
@@ -825,7 +941,7 @@ apiRoutes.post('/orders', requireCustomer, async (c) => {
   if (orderNotifyBotToken) {
     try {
       const { sendOrderNotification } = await import('../services/notify');
-      const result = await sendOrderNotification(db, orderNotifyBotToken, order.id, customerId, orderItems);
+      const result = await sendOrderNotification(db, orderNotifyBotToken, order.id, customerId, orderItems, order.delivery_method);
       console.log(`Order ${order.id} notification: sent=${result.sent}, failed=${result.failed}`);
     } catch (error) {
       console.error('Failed to send order notification:', error);

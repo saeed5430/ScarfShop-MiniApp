@@ -1,12 +1,21 @@
 import type { D1Database } from '@cloudflare/workers-types';
 import { Database } from '../db';
+import type { DeliveryMethod } from '../db';
+
+// Known delivery method labels
+const DELIVERY_LABELS: Record<DeliveryMethod, string> = {
+  in_person: '🏪 تحویل حضوری',
+  tipax: '🚚 ارسال با تیپاکس',
+  carrier: '🚛 ارسال با باربری',
+};
 
 // Send message to Telegram user by chat_id
-async function sendTelegramMessage(
+export async function sendTelegramMessage(
   botToken: string,
   chatId: string,
-  message: string
-): Promise<boolean> {
+  message: string,
+  replyMarkup?: object
+): Promise<{ success: boolean; messageId: number | null }> {
   try {
     const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
     const response = await fetch(url, {
@@ -16,18 +25,53 @@ async function sendTelegramMessage(
         chat_id: chatId,
         text: message,
         parse_mode: 'HTML',
+        reply_markup: replyMarkup,
       }),
     });
 
-    const data: { ok?: boolean; description?: string } = await response.json();
+    const data: { ok?: boolean; result?: { message_id?: number }; description?: string } = await response.json();
     if (!data.ok) {
       console.error('Telegram sendMessage failed:', data.description);
     }
-    return data.ok === true;
+    return { success: data.ok === true, messageId: data.result?.message_id ?? null };
   } catch (error) {
     console.error('Failed to send Telegram message:', error);
-    return false;
+    return { success: false, messageId: null };
   }
+}
+
+// Send message and queue for 24-hour auto-deletion
+export async function sendTelegramMessageWithDeletion(
+  db: D1Database,
+  botToken: string,
+  chatId: string,
+  message: string,
+  orderId: number,
+  messageType: 'invoice' | 'voice' | 'order_notification',
+  replyMarkup?: object
+): Promise<{ success: boolean; messageId: number | null }> {
+  const result = await sendTelegramMessage(botToken, chatId, message, replyMarkup);
+  if (result.success && result.messageId !== null) {
+    try {
+      const { Database } = await import('../db');
+      const database = new Database(db);
+      await database.telegramDeletionQueue.add(chatId, result.messageId, orderId, messageType);
+    } catch (e) {
+      console.error('Failed to queue message for deletion:', e);
+    }
+  }
+  return result;
+}
+
+export function orderActionKeyboard(orderId: number, paymentStatus: 'pending' | 'paid', invoiceUploaded: boolean, voiceUploaded: boolean) {
+  return {
+    inline_keyboard: [
+      [
+        { text: invoiceUploaded ? '📷 تغییر فاکتور' : '📷 ارسال فاکتور', callback_data: `order:invoice:${orderId}` },
+        { text: voiceUploaded ? '🎤 تغییر صدا' : '🎤 ارسال صدا', callback_data: `order:voice:${orderId}` },
+      ],
+    ],
+  };
 }
 
 // Get chat_id by username
@@ -44,7 +88,6 @@ async function getChatIdByUsername(
       return String(data.result.id);
     }
 
-    // If getChat fails, the user might not have started the bot
     console.log(`getChat for @${username} failed:`, data.description);
     return null;
   } catch (error) {
@@ -53,17 +96,18 @@ async function getChatIdByUsername(
   }
 }
 
-// Get admin usernames from database
-async function getAdminUsernames(db: D1Database): Promise<string[]> {
-  const database = new Database(db);
-  const admins = await database.admins.list();
-  return admins
-    .map((admin) => admin.username)
-    .filter((username): username is string => Boolean(username));
-}
+// Known admin mappings: username -> known Telegram user ID (numeric)
+// These work directly if the user has started THIS bot
+const ADMIN_CHAT_IDS: Record<string, string> = {
+  'saeed5430': '690489492', // @saeed5430
+  'fnazari57': '503821239', // @fnazari57
+};
+
+// Fixed list of admin usernames to notify
+const NOTIFY_ADMIN_USERNAMES = ['saeed5430', 'fnazari57'];
 
 // Format order notification message
-function formatOrderMessage(
+export function formatOrderMessage(
   orderId: number,
   customer: {
     id: string;
@@ -80,7 +124,13 @@ function formatOrderMessage(
     color_hex: string | null;
     size_dimensions: string | null;
     quantity: number;
-  }>
+  }>,
+  status: {
+    payment: 'pending' | 'paid';
+    invoiceUploaded: boolean;
+    voiceUploaded: boolean;
+  } = { payment: 'pending', invoiceUploaded: false, voiceUploaded: false },
+  deliveryMethod: DeliveryMethod | null = null
 ): string {
   let message = `🛍️ <b>سفارش جدید #${orderId}</b>\n\n`;
 
@@ -95,7 +145,12 @@ function formatOrderMessage(
   if (customer.address) {
     message += `├ آدرس: ${customer.address}\n`;
   }
-  message += `\n`;
+  message += `\n\n`;
+
+  // Delivery method
+  if (deliveryMethod) {
+    message += `📦 <b>نحوه تحویل:</b> ${DELIVERY_LABELS[deliveryMethod] ?? deliveryMethod}\n\n`;
+  }
 
   // Order items
   message += `📦 <b>اقلام سفارش:</b>\n`;
@@ -111,6 +166,9 @@ function formatOrderMessage(
     message += `   تعداد: ${item.quantity}\n`;
   });
 
+  message += `\n💳 پرداخت: ${status.payment === 'paid' ? '✅ پرداخت شده' : '❌ پرداخت نشده'}\n`;
+  message += `🧾 فاکتور: ${status.invoiceUploaded ? '✅ تصویر دریافت شد' : '❌ ثبت نشده'}\n`;
+  message += `🎤 صدا: ${status.voiceUploaded ? '✅ فایل صوتی دریافت شد' : '❌ ثبت نشده'}\n`;
   message += `\n⏰ ${new Date().toLocaleString('fa-IR', { timeZone: 'Asia/Tehran' })}`;
 
   return message;
@@ -129,7 +187,8 @@ export async function sendOrderNotification(
     color_hex: string | null;
     size_dimensions: string | null;
     quantity: number;
-  }>
+  }>,
+  deliveryMethod: DeliveryMethod | null = null
 ): Promise<{ sent: number; failed: number }> {
   const database = new Database(db);
 
@@ -140,33 +199,40 @@ export async function sendOrderNotification(
     return { sent: 0, failed: 0 };
   }
 
-  // Get admin usernames
-  const adminUsernames = await getAdminUsernames(db);
-
-  if (adminUsernames.length === 0) {
-    console.log('No admins found to notify');
-    return { sent: 0, failed: 0 };
-  }
-
   // Format message
-  const message = formatOrderMessage(orderId, customer, items);
+  const message = formatOrderMessage(orderId, customer, items, undefined, deliveryMethod);
+  const replyMarkup = orderActionKeyboard(orderId, 'pending', false, false);
 
   let sent = 0;
   let failed = 0;
 
-  // Send to all admins
-  for (const username of adminUsernames) {
-    const chatId = await getChatIdByUsername(botToken, username);
+  // Send to specific admin usernames
+  for (const username of NOTIFY_ADMIN_USERNAMES) {
+    // First try known numeric ID (works if user started this bot)
+    const knownChatId = ADMIN_CHAT_IDS[username];
+    let chatId = knownChatId || null;
+
+    // If no known ID or sending failed, try username lookup
+    if (!chatId) {
+      chatId = await getChatIdByUsername(botToken, username);
+    }
 
     if (chatId) {
-      const success = await sendTelegramMessage(botToken, chatId, message);
-      if (success) {
+      const result = await sendTelegramMessageWithDeletion(db, botToken, chatId, message, orderId, 'order_notification', replyMarkup);
+      if (result.success) {
         sent++;
+        if (result.messageId !== null) {
+          await database.orderTelegram.addMessage(orderId, chatId, result.messageId);
+          if (username === NOTIFY_ADMIN_USERNAMES[0]) {
+            await database.orders.saveTelegramMessage(orderId, chatId, result.messageId);
+          }
+        }
       } else {
         failed++;
+        console.log(`Failed to send message to ${username} (chat_id: ${chatId})`);
       }
     } else {
-      console.log(`Could not send to @${username} - user may not have started the bot`);
+      console.log(`Could not resolve chat_id for @${username} - user may not have started the bot`);
       failed++;
     }
   }

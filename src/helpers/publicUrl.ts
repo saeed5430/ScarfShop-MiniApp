@@ -20,14 +20,32 @@ export function publicUrl(path: string): string {
   } catch { /* empty */
   }
 
+  const absoluteBase = isBaseAbsolute
+    ? baseUrl
+    : new URL(baseUrl, window.location.href).toString();
+
   return new URL(
     // The path is not allowed to be starting with the slash as long as it will break the
     // base URL. For instance, having the "/my-base/" base URL and path
     // equal to "/tonconnect-manifest.json", we will not get the expected result like
     // "/my-base/tonconnect-manifest.json", but "/tonconnect-manifest.json".
     path.replace(/^\/+/, ''),
-    isBaseAbsolute
-      ? baseUrl
-      : window.location.origin + baseUrl,
+    absoluteBase,
   ).toString();
+}
+
+/**
+ * Resolves an asset path from the database (e.g. "/products/hijab/x.jpg")
+ * into an absolute URL against the current document location, so relative
+ * paths keep working both at the site root and under a GitHub Pages subpath.
+ * @returns The resolved URL, or the input when it is empty or non-resolvable.
+ */
+export function resolveAssetUrl(path: string | undefined): string | undefined {
+  if (!path) return undefined;
+  if (path.startsWith('blob:')) return path;
+  try {
+    return new URL(path.replace(/^\/+/, ''), window.location.href).toString();
+  } catch {
+    return path;
+  }
 }

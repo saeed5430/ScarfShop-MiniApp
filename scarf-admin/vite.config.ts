@@ -8,7 +8,7 @@ export default defineConfig({
     port: 3000,
     proxy: {
       "/api": {
-        target: "https://scarf-mini-app.abdollahi003.workers.dev",
+        target: "https://scarfminiappbale-api.abdollahi003.workers.dev",
         changeOrigin: true,
       },
     },

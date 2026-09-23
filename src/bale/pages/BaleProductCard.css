@@ -1,0 +1,170 @@
+.bale-product-card {
+  background-color: var(--bale-surface, #FFFFFF);
+  border-radius: 20px;
+  border: 1px solid var(--bale-border, #E5E7EB);
+  overflow: hidden;
+  box-shadow: var(--bale-shadow, 0 4px 12px rgba(0, 0, 0, 0.08));
+  animation: baleCardIn 0.2s ease-out;
+}
+
+@keyframes baleCardIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.bale-product-card-header {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px 12px 8px;
+}
+
+.bale-product-card-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--bale-text, #111827);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.bale-product-card-size-badge {
+  font-size: 13px;
+  font-weight: 600;
+  color: #EC4899;
+  background-color: rgba(236, 72, 153, 0.12);
+  padding: 3px 10px;
+  border-radius: 8px;
+  display: inline-block;
+  width: fit-content;
+  align-self: flex-start;
+}
+
+.bale-product-card-image-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background-color: var(--bale-bg, #FAFAFA);
+  overflow: hidden;
+  border-radius: 0 0 20px 20px;
+}
+
+.bale-product-card-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  transform: scale(1.45);
+}
+
+.bale-product-card-image-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--bale-text-2, #6B7280);
+  opacity: 0.3;
+}
+
+.bale-product-card-photo-tags {
+  position: absolute;
+  inset-inline: 8px;
+  bottom: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.bale-product-card-photo-tag {
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  color: #111827;
+  background: rgba(255, 255, 255, 0.92);
+  border: none;
+  border-radius: 999px;
+  padding: 4px 10px;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+  backdrop-filter: blur(4px);
+}
+
+.bale-product-card-photo-tag:active { transform: scale(0.95); }
+
+.bale-product-card-color-section { padding: 8px 10px 12px; }
+.bale-product-card-color-table-wrap { overflow-x: hidden; margin-bottom: 8px; }
+.bale-product-card-color-table-wrap:last-child { margin-bottom: 0; }
+.bale-product-card-color-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.bale-product-card-color-row-colors { height: 44px; }
+.bale-product-card-color-cell { padding: 6px 4px; text-align: center; vertical-align: middle; min-width: 0; }
+.bale-product-card-color-cell--empty { padding: 0; }
+
+.bale-product-card-color-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 2px solid var(--bale-border, #E5E7EB);
+  background-color: var(--bale-surface, #FFFFFF);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  padding: 2px;
+}
+
+.bale-product-card-color-btn:active { transform: scale(0.92); }
+
+.bale-product-card-color-btn--selected {
+  border-color: var(--bale-primary, #7C3AED);
+  box-shadow: 0 0 0 2px var(--bale-bg, #FAFAFA), 0 0 0 3px var(--bale-primary, #7C3AED);
+}
+
+.bale-product-card-color-dot {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.bale-product-card-color-name {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--bale-text-2, #6B7280);
+  line-height: 1.2;
+  max-width: 48px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin: 4px auto 0;
+  display: block;
+}
+
+.bale-product-card-qty-row { height: 32px; }
+.bale-product-card-qty-cell { padding: 0 4px; text-align: center; vertical-align: middle; }
+.bale-product-card-qty-value { font-size: 14px; font-weight: 700; color: var(--bale-text, #111827); min-width: 20px; display: inline-block; }
+.bale-product-card-action-row { height: 32px; }
+.bale-product-card-action-cell { padding: 0 4px; text-align: center; vertical-align: middle; }
+
+.bale-product-card-qty-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1.5px solid var(--bale-border, #E5E7EB);
+  background-color: var(--bale-surface, #FFFFFF);
+  color: var(--bale-primary, #7C3AED);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.1s ease;
+  line-height: 1;
+}
+
+.bale-product-card-qty-btn:active:not(:disabled) { transform: scale(0.92); background-color: var(--bale-primary, #7C3AED); color: white; }
+.bale-product-card-qty-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.bale-product-card-qty-btn:disabled:active { transform: none; background-color: var(--bale-surface, #FFFFFF); color: var(--bale-primary, #7C3AED); }
+.bale-product-card-qty-btn--plus { margin-bottom: 1px; }
+.bale-product-card-qty-btn--minus { margin-top: 1px; }

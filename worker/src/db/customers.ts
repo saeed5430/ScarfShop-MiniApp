@@ -9,7 +9,7 @@ export class CustomersDB {
     const jalaliNow = nowJalali();
 
     const stmt = this.db.prepare(`
-      INSERT INTO customers (id, first_name, last_name, username, language_code, avatar_url, is_premium, invite_code, created_at, last_active)
+      INSERT INTO telegram_customers (id, first_name, last_name, username, language_code, avatar_url, is_premium, invite_code, created_at, last_active)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
@@ -57,7 +57,7 @@ export class CustomersDB {
     // Existing customer - only update safe fields (NOT phone, address, postal_code)
     const now = nowJalali();
     const stmt = this.db.prepare(`
-      UPDATE customers SET
+      UPDATE telegram_customers SET
         username = COALESCE(?, username),
         language_code = COALESCE(?, language_code),
         avatar_url = COALESCE(?, avatar_url),
@@ -77,13 +77,13 @@ export class CustomersDB {
   }
 
   async findById(id: string): Promise<Customer | null> {
-    const stmt = this.db.prepare('SELECT * FROM customers WHERE id = ?');
+    const stmt = this.db.prepare('SELECT * FROM telegram_customers WHERE id = ?');
     const row = await stmt.bind(id).first<Customer>();
     return row ?? null;
   }
 
   async findByUsername(username: string): Promise<Customer | null> {
-    const stmt = this.db.prepare('SELECT * FROM customers WHERE username = ?');
+    const stmt = this.db.prepare('SELECT * FROM telegram_customers WHERE username = ?');
     const row = await stmt.bind(username).first<Customer>();
     return row ?? null;
   }
@@ -130,7 +130,7 @@ export class CustomersDB {
     }
 
     values.push(id);
-    const stmt = this.db.prepare(`UPDATE customers SET ${fields.join(', ')} WHERE id = ?`);
+    const stmt = this.db.prepare(`UPDATE telegram_customers SET ${fields.join(', ')} WHERE id = ?`);
     await stmt.bind(...values).run();
 
     return this.findById(id);
@@ -138,24 +138,24 @@ export class CustomersDB {
 
   async updateLastActive(id: string): Promise<void> {
     const jalaliNow = nowJalali();
-    const stmt = this.db.prepare('UPDATE customers SET last_active = ? WHERE id = ?');
+    const stmt = this.db.prepare('UPDATE telegram_customers SET last_active = ? WHERE id = ?');
     await stmt.bind(jalaliNow, id).run();
   }
 
   async list(limit = 50, offset = 0): Promise<Customer[]> {
-    const stmt = this.db.prepare('SELECT * FROM customers ORDER BY created_at DESC LIMIT ? OFFSET ?');
+    const stmt = this.db.prepare('SELECT * FROM telegram_customers ORDER BY created_at DESC LIMIT ? OFFSET ?');
     const results = await stmt.bind(limit, offset).all<Customer>();
     return results.results;
   }
 
   async count(): Promise<number> {
-    const stmt = this.db.prepare('SELECT COUNT(*) as count FROM customers');
+    const stmt = this.db.prepare('SELECT COUNT(*) as count FROM telegram_customers');
     const result = await stmt.first<{ count: number }>();
     return result?.count ?? 0;
   }
 
   async delete(id: string): Promise<boolean> {
-    const stmt = this.db.prepare('DELETE FROM customers WHERE id = ?');
+    const stmt = this.db.prepare('DELETE FROM telegram_customers WHERE id = ?');
     const result = await stmt.bind(id).run();
     return result.meta.changes > 0;
   }

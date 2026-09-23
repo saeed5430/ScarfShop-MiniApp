@@ -7,10 +7,13 @@ import {
   getProducts,
   getProductColors,
   getProductSizes,
+  getSizes,
   createOrder,
+  DELIVERY_LABELS,
   type Category,
   type Product,
   type Color,
+  type DeliveryMethod,
   type Size,
 } from '@/api/client.ts';
 import { FilterBar } from './FilterBar.tsx';
@@ -32,20 +35,91 @@ export interface SelectedItem {
   quantity: number;
 }
 
+export interface DisplayItem {
+  pwr: ProductWithRelations;
+  displaySize: Size | null;
+}
+
+function sizeValue(size: Size): number {
+  const n = parseFloat(size.dimensions);
+  return Number.isNaN(n) ? -Infinity : n;
+}
+
+// Expand products into display rows grouped by size (largest first),
+// preserving the base drag order (sort_order). Multi-size products appear
+// once per size (biggest first, then smaller); single-size products appear
+// once at their drag-order position.
+function buildDisplayItems(products: ProductWithRelations[]): DisplayItem[] {
+  if (products.length === 0) return [];
+
+  let maxVal = -Infinity;
+  for (const pwr of products) {
+    for (const s of pwr.sizes) {
+      const v = sizeValue(s);
+      if (v > maxVal) maxVal = v;
+    }
+  }
+
+  const result: DisplayItem[] = [];
+
+  // Pass 1: base drag order. Big-size variants, or the product once if it
+  // has no big size (single-size products).
+  for (const pwr of products) {
+    const big = pwr.sizes.find((s) => sizeValue(s) === maxVal);
+    if (big) {
+      result.push({ pwr, displaySize: big });
+    } else {
+      result.push({ pwr, displaySize: pwr.sizes[0] ?? null });
+    }
+  }
+
+  // Pass 2+: remaining sizes in descending order, only for products that
+  // also have the big size (so single-size products are not duplicated).
+  const otherVals = Array.from(
+    new Set(
+      products.flatMap((pwr) => pwr.sizes.map((s) => sizeValue(s)))
+    )
+  )
+    .filter((v) => v !== maxVal)
+    .sort((a, b) => b - a);
+
+  for (const v of otherVals) {
+    for (const pwr of products) {
+      const big = pwr.sizes.find((s) => sizeValue(s) === maxVal);
+      if (!big) continue;
+      const match = pwr.sizes.find((s) => sizeValue(s) === v);
+      if (match) {
+        result.push({ pwr, displaySize: match });
+      }
+    }
+  }
+
+  return result;
+}
+
 export const QuickBuyPage: FC = () => {
   const { customer } = useAuth();
   const navigate = useNavigate();
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<ProductWithRelations[]>([]);
+  const [sizes, setSizes] = useState<Size[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
+  const [selectedSize, setSelectedSize] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+
+  const handleSelectCategory = useCallback((categoryId: number | null, sizeId?: number | null) => {
+    setSelectedCategory(categoryId);
+    setSelectedSize(sizeId ?? null);
+  }, []);
   const [selectedItems, setSelectedItems] = useState<Map<string, SelectedItem>>(new Map());
+  const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>('in_person');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
 
   useEffect(() => {
     getCategories().then((res) => setCategories(res.categories)).catch(() => {});
+    getSizes().then((res) => setSizes(res.items)).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -158,11 +232,13 @@ export const QuickBuyPage: FC = () => {
 
       await createOrder({
         user_id: customer.id,
+        delivery_method: deliveryMethod,
         items,
       });
 
       setSubmitSuccess(true);
       setSelectedItems(new Map());
+      setDeliveryMethod('in_person');
 
       setTimeout(() => {
         navigate('/');
@@ -171,18 +247,29 @@ export const QuickBuyPage: FC = () => {
       console.error('Order submission failed:', err);
       setSubmitting(false);
     }
-  }, [customer, submitting, selectedItems, navigate]);
+  }, [customer, submitting, selectedItems, deliveryMethod, navigate]);
 
   return (
     <Page back={true}>
       <div className="quickbuy-page">
         <FilterBar
           categories={categories}
+          sizes={sizes}
           selectedCategory={selectedCategory}
-          onSelectCategory={setSelectedCategory}
+          selectedSize={selectedSize}
+          onSelectCategory={handleSelectCategory}
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
         />
+
+        <div className="quickbuy-guide">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10" />
+            <path d="M12 16v-4" />
+            <path d="M12 8h.01" />
+          </svg>
+          <span>ترتیب محصولات بر اساس سایز است: ابتدا محصولات سایز ۱۳۰، سپس سایز ۱۰۰ قرار داده شده‌اند.</span>
+        </div>
 
         <div className="quickbuy-list">
           {loading && (
@@ -203,29 +290,41 @@ export const QuickBuyPage: FC = () => {
             </div>
           )}
 
-          {!loading && products.map((pwr) =>
-            pwr.sizes.length > 0
-              ? pwr.sizes.map((size) => (
-                <ProductCard
-                  key={`${pwr.product.id}-${size.id}`}
-                  productWithRelations={pwr}
-                  selectedSize={size}
-                  selectedItems={selectedItems}
-                  onToggleColor={toggleColor}
-                  onUpdateQuantity={updateQuantity}
-                />
-              ))
-              : (
-                <ProductCard
-                  key={pwr.product.id}
-                  productWithRelations={pwr}
-                  selectedSize={null}
-                  selectedItems={selectedItems}
-                  onToggleColor={toggleColor}
-                  onUpdateQuantity={updateQuantity}
-                />
-              )
-          )}
+ {!loading && (() => {
+            // اگر سایز انتخاب شده است، فقط محصولاتی که آن سایز را دارند را نمایش بده
+            // و برای هر محصول فقط یک کارت با آن سایز خاص بساز
+            if (selectedSize) {
+              const filtered = products.filter((pwr) =>
+                pwr.sizes.some((s) => s.id === selectedSize)
+              );
+              return filtered.map((pwr) => {
+                const size = pwr.sizes.find((s) => s.id === selectedSize) ?? null;
+                return (
+                  <ProductCard
+                    key={`${pwr.product.id}-${size?.id}`}
+                    productWithRelations={pwr}
+                    selectedSize={size}
+                    selectedItems={selectedItems}
+                    onToggleColor={toggleColor}
+                    onUpdateQuantity={updateQuantity}
+                  />
+                );
+              });
+            }
+
+            // نمایش پیش‌فرض: باز کردن محصولات چندسایز بر اساس سایز (بزرگ‌تر اول)
+            const displayItems = buildDisplayItems(products);
+            return displayItems.map((item) => (
+              <ProductCard
+                key={`${item.pwr.product.id}-${item.displaySize?.id ?? 'none'}`}
+                productWithRelations={item.pwr}
+                selectedSize={item.displaySize}
+                selectedItems={selectedItems}
+                onToggleColor={toggleColor}
+                onUpdateQuantity={updateQuantity}
+              />
+            ));
+          })()}
         </div>
 
         {submitSuccess && (
@@ -263,13 +362,29 @@ export const QuickBuyPage: FC = () => {
                         style={{ backgroundColor: item.color.hex }}
                       />
                       <span>{item.color.name}</span>
-                      <span className="quickbuy-order-item-size">{item.size.dimensions}</span>
+                      <span className="quickbuy-order-item-size">سایز {item.size.dimensions}</span>
                     </div>
                     <span className="quickbuy-order-item-qty">×{item.quantity}</span>
                   </div>
                 ))}
               </div>
             ))}
+
+            <div className="quickbuy-delivery">
+              <div className="quickbuy-delivery-title">نحوه تحویل سفارش</div>
+              <div className="quickbuy-delivery-options">
+                {(Object.keys(DELIVERY_LABELS) as DeliveryMethod[]).map((method) => (
+                  <button
+                    type="button"
+                    key={method}
+                    className={`quickbuy-delivery-option ${deliveryMethod === method ? 'active' : ''}`}
+                    onClick={() => setDeliveryMethod(method)}
+                  >
+                    {DELIVERY_LABELS[method]}
+                  </button>
+                ))}
+              </div>
+            </div>
 
             <button
               className="quickbuy-submit-btn"

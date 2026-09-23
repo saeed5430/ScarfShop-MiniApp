@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { PlusOutlined } from "@ant-design/icons";
 import { MultiImageUploader, type ImageData } from "../../components/ImageUploader/multi";
 
-const API_URL = "https://scarf-mini-app.abdollahi003.workers.dev";
+const API_URL = "https://scarfminiappbale-api.abdollahi003.workers.dev";
 
 const getAuthHeaders = (): Record<string, string> => {
   const token = localStorage.getItem("admin_token");
@@ -50,6 +50,20 @@ export const ProductEdit: React.FC = () => {
 
   const productData = queryResult?.data?.data;
 
+  const normalizeImages = (images: unknown): ImageData[] => {
+    const arr = typeof images === "string" ? (() => { try { return JSON.parse(images); } catch { return []; } })() : images;
+    if (!Array.isArray(arr)) return [];
+    const out: ImageData[] = [];
+    for (const item of arr) {
+      if (typeof item === "string") {
+        if (item && item !== "[object Object]") out.push({ url: item, fileId: "" });
+      } else if (item && typeof item === "object" && typeof (item as { url?: unknown }).url === "string") {
+        out.push({ url: (item as { url: string }).url, fileId: typeof (item as { fileId?: unknown }).fileId === "string" ? (item as { fileId: string }).fileId : "" });
+      }
+    }
+    return out;
+  };
+
   useEffect(() => {
     if (productData) {
       formProps.form?.setFieldsValue({
@@ -65,7 +79,7 @@ export const ProductEdit: React.FC = () => {
         color_ids: productData.color_ids || [],
         size_ids: productData.size_ids || [],
       });
-      setImageList(productData.images || []);
+      setImageList(normalizeImages(productData.images));
     }
   }, [productData, formProps.form]);
 
@@ -82,7 +96,7 @@ export const ProductEdit: React.FC = () => {
     }
     setCreatingColor(true);
     try {
-      const response = await fetch(`${API_URL}/api/colors`, {
+      const response = await fetch(`${API_URL}/api/bale-admin/colors`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify(newColor),
@@ -109,7 +123,7 @@ export const ProductEdit: React.FC = () => {
     }
     setCreatingSize(true);
     try {
-      const response = await fetch(`${API_URL}/api/sizes`, {
+      const response = await fetch(`${API_URL}/api/bale-admin/sizes`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify(newSize),
@@ -136,7 +150,7 @@ export const ProductEdit: React.FC = () => {
         onFinish={async (values) => {
           await formProps.onFinish?.({
             ...values,
-            images: imageList,
+            images: imageList.map((img) => img.url).filter(Boolean),
           });
         }}
         layout="vertical"
@@ -222,7 +236,7 @@ export const ProductEdit: React.FC = () => {
           <MultiImageUploader
             value={imageList}
             onChange={setImageList}
-            folder="products"
+            folder="/products-bale"
             maxCount={8}
           />
         </Card>

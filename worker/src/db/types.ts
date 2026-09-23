@@ -104,6 +104,7 @@ export interface Product {
   images: string[];
   is_stock: boolean;
   sku: string | null;
+  sort_order: number;
   created_at: string;
   updated_at: string;
 }
@@ -119,6 +120,7 @@ export interface CreateProductInput {
   images?: string[];
   is_stock?: boolean;
   sku?: string;
+  sort_order?: number;
 }
 
 export interface UpdateProductInput {
@@ -132,6 +134,12 @@ export interface UpdateProductInput {
   images?: string[];
   is_stock?: boolean;
   sku?: string;
+  sort_order?: number;
+}
+
+export interface ReorderProductItem {
+  id: number;
+  sort_order: number;
 }
 
 // Designs (standalone - no FK to products)
@@ -208,23 +216,39 @@ export interface ProductSize {
 
 // Orders
 
+export type DeliveryMethod = 'in_person' | 'tipax' | 'carrier';
+
 export interface Order {
   id: number;
-  user_id: string;
+  customer_id: string;
+  platform: 'telegram' | 'bale';
   payment_status: 'pending' | 'paid';
+  delivery_method: DeliveryMethod | null;
   notes: string | null;
+  receipt_file_id: string | null;
+  receipt_file_type: 'photo' | 'voice' | null;
+  receipt_uploaded_at: number | null;
+  telegram_chat_id: string | null;
+  telegram_order_message_id: number | null;
+  invoice_file_id: string | null;
+  invoice_uploaded_at: number | null;
+  voice_file_id: string | null;
+  voice_uploaded_at: number | null;
   created_at: string;
   updated_at: string;
 }
 
 export interface CreateOrderInput {
-  user_id: string;
+  customer_id: string;
+  platform?: 'telegram' | 'bale';
   payment_status?: 'pending' | 'paid';
+  delivery_method?: DeliveryMethod | null;
   notes?: string;
 }
 
 export interface UpdateOrderInput {
   payment_status?: 'pending' | 'paid';
+  delivery_method?: DeliveryMethod | null;
   notes?: string;
 }
 
@@ -290,4 +314,53 @@ export interface Setting {
 
 export interface UpdateSettingInput {
   value: string;
+}
+
+// Admin Telegram personal accounts (sessions live in telegram-user-service)
+
+export type TelegramAccountStatus =
+  | 'not_connected'
+  | 'connected'
+  | 'error'
+  | 'revoked'
+  | 'disabled';
+
+export interface AdminTelegramAccount {
+  admin_id: string;
+  username: string | null;
+  telegram_user_id: string | null;
+  telegram_phone_masked: string | null;
+  status: TelegramAccountStatus;
+  personal_sending_enabled: boolean;
+  session_ref: string | null;
+  last_connected_at: string | null;
+  last_verified_at: string | null;
+  last_error: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UpdateTelegramAccountInput {
+  username?: string | null;
+  telegram_user_id?: string | null;
+  telegram_phone_masked?: string | null;
+  status?: TelegramAccountStatus;
+  personal_sending_enabled?: boolean;
+  session_ref?: string | null;
+  last_connected_at?: string | null;
+  last_verified_at?: string | null;
+  last_error?: string | null;
+}
+
+// Telegram message deletion queue (for 24-hour auto-deletion)
+
+export interface TelegramDeletionQueueItem {
+  id: number;
+  telegram_chat_id: string;
+  telegram_message_id: number;
+  order_id: number;
+  message_type: 'invoice' | 'voice' | 'order_notification';
+  delete_at: number;
+  deleted_at: number | null;
+  created_at: number;
 }

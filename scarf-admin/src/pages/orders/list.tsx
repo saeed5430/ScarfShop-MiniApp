@@ -10,6 +10,13 @@ import { PersianDate } from "../../components/PersianDate";
 
 const paymentColors: Record<string, string> = { pending: "orange", paid: "green" };
 const paymentLabels: Record<string, string> = { pending: "پرداخت نشده", paid: "پرداخت شده" };
+const deliveryLabels: Record<string, string> = {
+  in_person: "حضوری",
+  tipax: "تیپاکس",
+  carrier: "باربری",
+};
+const platformColors: Record<string, string> = { telegram: "blue", bale: "volcano" };
+const platformLabels: Record<string, string> = { telegram: "تلگرام", bale: "بله" };
 
 export const OrderList: React.FC = () => {
   const { tableProps } = useTable();
@@ -47,9 +54,13 @@ export const OrderList: React.FC = () => {
         mobileCardSubtitle={(record) => `${record.item_count ?? 0} ردیف — ${record.payment_status === 'paid' ? 'پرداخت شده' : 'پرداخت نشده'}`}
         columns={[
           { key: "id", title: "ID", dataIndex: "id", width: 60 },
-          { key: "user_id", title: "مشتری", dataIndex: "user_id" },
+          { key: "platform", title: "پلتفرم", dataIndex: "platform", width: 90, render: (v: string) => <Tag color={platformColors[v] ?? "default"}>{platformLabels[v] ?? v}</Tag> },
+          { key: "customer_id", title: "مشتری", dataIndex: "customer_id" },
           { key: "item_count", title: "اقلام", dataIndex: "item_count", width: 80, render: (v: number) => <span style={{ fontWeight: 600, color: "#7C3AED" }}>{v ?? 0}</span> },
+          { key: "delivery_method", title: "تحویل", dataIndex: "delivery_method", width: 100, render: (v: string | null) => v ? <Tag color="purple">{deliveryLabels[v] ?? v}</Tag> : <Tag>—</Tag> },
           { key: "payment_status", title: "پرداخت", dataIndex: "payment_status", render: (v: string) => <Tag color={paymentColors[v]}>{paymentLabels[v]}</Tag> },
+          { key: "invoice_uploaded_at", title: "فاکتور", dataIndex: "invoice_uploaded_at", render: (v: number | null) => <Tag color={v ? "green" : "default"}>{v ? "دارد" : "ندارد"}</Tag> },
+          { key: "voice_uploaded_at", title: "صوت", dataIndex: "voice_uploaded_at", render: (v: number | null) => <Tag color={v ? "blue" : "default"}>{v ? "دارد" : "ندارد"}</Tag> },
           { key: "created_at", title: "تاریخ", dataIndex: "created_at", render: (v: string) => <PersianDate value={v} /> },
         ]}
         actions={{

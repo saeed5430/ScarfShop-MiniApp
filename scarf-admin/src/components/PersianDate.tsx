@@ -41,8 +41,15 @@ function gregorianToJalali(gy: number, gm: number, gd: number): [number, number,
   return [jy, jm, jd];
 }
 
-function formatJalali(dateStr: string): string {
-  if (!dateStr) return "-";
+function formatJalali(dateStr: string | number): string {
+  if (dateStr === null || dateStr === undefined || dateStr === "") return "-";
+  if (typeof dateStr === "number") {
+    const date = new Date(dateStr * 1000);
+    if (isNaN(date.getTime())) return String(dateStr);
+    const [jy, jm, jd] = gregorianToJalali(date.getFullYear(), date.getMonth() + 1, date.getDate());
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${jy}/${pad(jm)}/${pad(jd)}`;
+  }
 
   // If already in Jalali format (YYYY/MM/DD), return as-is
   if (/^\d{4}\/\d{2}\/\d{2}/.test(dateStr)) {
@@ -70,12 +77,12 @@ function formatJalali(dateStr: string): string {
 }
 
 interface PersianDateProps {
-  value?: string | null;
+  value?: string | number | null;
   style?: React.CSSProperties;
 }
 
 export const PersianDate: React.FC<PersianDateProps> = ({ value, style }) => {
-  const formatted = formatJalali(value || "");
+  const formatted = formatJalali(value ?? "");
 
   return (
     <Text style={{ fontSize: 14, ...style }}>

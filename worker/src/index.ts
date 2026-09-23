@@ -3,9 +3,13 @@ import { cors } from 'hono/cors';
 import { apiRoutes } from './routes/api';
 import { adminAuthRoutes } from './routes/admin-auth';
 import { adminApiRoutes } from './routes/admin-api';
+import { adminTelegramRoutes } from './routes/admin-telegram';
 import { authRoutes } from './routes/auth';
 import { uploadRoutes } from './routes/upload-image';
 import { telegramRoutes } from './routes/telegram';
+import { baleRoutes } from './bale/bale-routes';
+import { baleWebhookRoutes } from './bale/bale-webhook';
+import { cronRoutes } from './routes/cron';
 import { setupRoutes } from './routes/setup';
 import { testRoutes } from './routes/test';
 import { runMigrations } from './db/migrate';
@@ -21,6 +25,12 @@ type Bindings = {
   IMAGEKIT_URL_ENDPOINT: string;
   JWT_SECRET: string;
   ORDER_NOTIFY_BOT_TOKEN: string;
+  TELEGRAM_USER_SERVICE_URL: string;
+  TELEGRAM_USER_SERVICE_TOKEN: string;
+  MINI_APP_URL: string;
+  BALE_DB: D1Database;
+  BALE_BOT_TOKEN: string;
+  BALE_ORDER_BOT_TOKEN: string;
 };
 
 const app = new Hono<{ Bindings: Bindings }>();
@@ -31,7 +41,10 @@ let migrationsDone = false;
 app.use('/api/*', cors({
   origin: [
     'https://scarf-admin.pages.dev',
+    'https://master.scarf-admin.pages.dev',
+    'https://saeed5430.github.io',
     'http://localhost:3000',
+    'http://localhost:5173',
   ],
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowHeaders: ['Content-Type', 'Authorization'],
@@ -60,6 +73,7 @@ app.route('/api/test', testRoutes);
 // Admin-protected routes (JWT required for ALL operations)
 app.use('/api/admin/*', requireAdmin);
 app.route('/api/admin', adminApiRoutes);
+app.route('/api/admin', adminTelegramRoutes);
 
 // Admin-protected upload routes
 app.use('/api/upload/*', requireAdmin);
@@ -70,6 +84,13 @@ app.route('/api', apiRoutes);
 
 // Telegram webhook (no auth needed)
 app.route('/webhook/telegram', telegramRoutes);
+
+// Bale Mini App API (BALE_DB) + webhooks
+app.route('/api/bale', baleRoutes);
+app.route('/webhook/bale', baleWebhookRoutes);
+
+// Cron routes (for scheduled tasks)
+app.route('/cron', cronRoutes);
 
 // Serve frontend assets
 app.get('*', async (c) => {

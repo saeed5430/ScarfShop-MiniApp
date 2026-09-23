@@ -44,7 +44,6 @@ export async function init(options: {
             firstThemeSent = true;
             tp ||= retrieveLaunchParams().tgWebAppThemeParams as Record<string, string>;
           }
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           return emitEvent('theme_changed', { theme_params: tp as any });
         }
 

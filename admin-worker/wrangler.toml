@@ -1,0 +1,13 @@
+name = "scarfminiappbale-api"
+main = "src/index.ts"
+compatibility_date = "2026-07-04"
+compatibility_flags = ["nodejs_compat"]
+
+[[d1_databases]]
+binding = "BALE_DB"
+database_name = "scarf-mini-app-bale"
+database_id = "478274fb-e059-42ff-b0d6-83822d61322d"
+
+[vars]
+BASE_URL = "https://scarfminiappbale-api.abdollahi003.workers.dev"
+JWT_SECRET = "scarf-mini-app-jwt-secret-2024-secure-random-key-change-in-production"

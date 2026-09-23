@@ -2,7 +2,7 @@ import React, { useState, useRef, useCallback } from "react";
 import { Button, message, Spin, Image } from "antd";
 import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 
-const API_URL = "https://scarf-mini-app.abdollahi003.workers.dev";
+const API_URL = "https://scarfminiappbale-api.abdollahi003.workers.dev";
 
 const getAuthHeaders = (): Record<string, string> => {
   const token = localStorage.getItem("admin_token");
@@ -20,7 +20,7 @@ interface ImageUploaderProps {
 export const ImageUploader: React.FC<ImageUploaderProps> = ({
   value,
   onChange,
-  folder = "uploads",
+  folder = "/products-bale",
   disabled = false,
   maxSize = 5 * 1024 * 1024, // 5MB
 }) => {
@@ -50,7 +50,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
       formData.append("folder", folder);
       formData.append("fileName", file.name);
 
-      const response = await fetch(`${API_URL}/api/upload/image`, {
+      const response = await fetch(`${API_URL}/api/bale-admin/upload/image`, {
         method: "POST",
         headers: getAuthHeaders(),
         body: formData,
